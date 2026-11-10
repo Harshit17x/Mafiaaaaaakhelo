@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   KeyRound,
+  Layers,
   Plus,
   RotateCcw,
   Volume2,
@@ -15,6 +16,7 @@ import { soundEngine } from '../audio/SoundEngine';
 import { AudioControls } from '../components/AudioControls';
 import { LivePlayersBadge } from '../components/LivePlayersBadge';
 import { MafiaTitleLogo } from '../components/MafiaTitleLogo';
+import { MobsterPaperScene } from '../components/MobsterPaperScene';
 import { TitleAtmosphereCanvas } from '../components/TitleAtmosphereCanvas';
 import { useGameStore } from '../stores/useGameStore';
 
@@ -98,6 +100,7 @@ export function HomePage() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
+  const [sceneMode, setSceneMode] = useState<'paper3d' | 'photo'>('paper3d');
   const aliasInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -269,6 +272,10 @@ export function HomePage() {
         } else if (e.key === 'r' || e.key === 'R') {
           e.preventDefault();
           replayIntro();
+        } else if (e.key === 'v' || e.key === 'V') {
+          e.preventDefault();
+          soundEngine.playMenuTick();
+          setSceneMode((m) => (m === 'paper3d' ? 'photo' : 'paper3d'));
         }
       }
     };
@@ -340,39 +347,66 @@ export function HomePage() {
       onClick={bootPhase === 'loading' ? skipIntro : undefined}
       className="relative z-10 min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#060405] text-cream-100 select-none flex flex-col justify-between"
     >
-      {/* Full-bleed speakeasy background scene with subtle camera breath & cursor parallax */}
+      {/* Full-bleed speakeasy background scene: 3D Paper SVG diorama or Noir Photo */}
       <div
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
         aria-hidden="true"
       >
-        <motion.div
-          animate={{
-            opacity: bootPhase === 'loading' ? 0.18 + (loadProgress / 100) * 0.42 : 1,
-            scale: bootPhase === 'loading' ? 1.07 - (loadProgress / 100) * 0.03 : 1.035,
-            x: parallax.x,
-            y: parallax.y,
-          }}
-          transition={{
-            opacity: { duration: 0.7, ease: 'easeOut' },
-            scale: { duration: 1.4, ease: [0.22, 1, 0.36, 1] },
-            x: { type: 'spring', stiffness: 45, damping: 20 },
-            y: { type: 'spring', stiffness: 45, damping: 20 },
-          }}
-          className="w-full h-full will-change-transform"
-        >
-          <img
-            src="/assets/mafia-title-bg.jpg"
-            alt=""
-            className="w-full h-full object-cover object-[74%_24%] md:object-[68%_center]"
-          />
-        </motion.div>
+        {sceneMode === 'photo' ? (
+          <motion.div
+            animate={{
+              opacity: bootPhase === 'loading' ? 0.18 + (loadProgress / 100) * 0.42 : 1,
+              scale: bootPhase === 'loading' ? 1.07 - (loadProgress / 100) * 0.03 : 1.035,
+              x: parallax.x,
+              y: parallax.y,
+            }}
+            transition={{
+              opacity: { duration: 0.7, ease: 'easeOut' },
+              scale: { duration: 1.4, ease: [0.22, 1, 0.36, 1] },
+              x: { type: 'spring', stiffness: 45, damping: 20 },
+              y: { type: 'spring', stiffness: 45, damping: 20 },
+            }}
+            className="w-full h-full will-change-transform"
+          >
+            <img
+              src="/assets/mafia-title-bg.jpg"
+              alt=""
+              className="w-full h-full object-cover object-[74%_24%] md:object-[68%_center]"
+            />
+          </motion.div>
+        ) : (
+          <div
+            className="relative w-full h-full transition-opacity duration-700"
+            style={{
+              opacity: bootPhase === 'loading' ? 0.28 + (loadProgress / 100) * 0.55 : 1,
+            }}
+          >
+            {/* Deep smoky speakeasy ambient backdrop behind the 3D paper shadowbox */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(circle at 74% 46%, rgba(126, 68, 26, 0.44) 0%, rgba(36, 20, 12, 0.65) 42%, #050404 82%)',
+              }}
+            />
+
+            {/* 3D Pop-Out Paper-Cut SVG Diorama on the right half */}
+            <div className="absolute right-[-10vw] sm:right-[3vw] lg:right-[5vw] xl:right-[7vw] top-[8vh] sm:top-[6.5vh] h-[76vh] sm:h-[82vh] aspect-[760/1000] flex items-center justify-center opacity-50 md:opacity-100 transition-opacity">
+              <MobsterPaperScene
+                tiltX={parallax.y * 0.85}
+                tiltY={-parallax.x * 0.9}
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Warm ambient speakeasy light bloom */}
         <div
           className="absolute inset-0 animate-ember-pulse"
           style={{
             background:
-              'radial-gradient(circle at 72% 48%, rgba(224, 138, 48, 0.16) 0%, rgba(152, 74, 24, 0.06) 36%, transparent 65%)',
+              'radial-gradient(circle at 72% 48%, rgba(224, 138, 48, 0.16) 0%, rgba(152, 74, 24, 0.05) 36%, transparent 65%)',
           }}
         />
 
@@ -381,7 +415,9 @@ export function HomePage() {
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(90deg, rgba(6,4,6,0.92) 0%, rgba(7,5,6,0.78) 28%, rgba(8,6,7,0.34) 52%, rgba(6,4,6,0.12) 78%, rgba(6,4,6,0.42) 100%)',
+              sceneMode === 'photo'
+                ? 'linear-gradient(90deg, rgba(6,4,6,0.92) 0%, rgba(7,5,6,0.78) 28%, rgba(8,6,7,0.34) 52%, rgba(6,4,6,0.12) 78%, rgba(6,4,6,0.42) 100%)'
+                : 'linear-gradient(90deg, rgba(5,4,4,0.94) 0%, rgba(5,4,4,0.78) 28%, rgba(5,4,4,0.16) 46%, transparent 64%)',
           }}
         />
         <div
@@ -392,16 +428,22 @@ export function HomePage() {
           }}
         />
         <div
-          className="absolute inset-x-0 bottom-0 h-36"
+          className="absolute inset-x-0 bottom-0 h-24"
           style={{
             background:
-              'linear-gradient(180deg, transparent 0%, rgba(5,4,5,0.88) 100%)',
+              sceneMode === 'photo'
+                ? 'linear-gradient(180deg, transparent 0%, rgba(5,4,5,0.88) 100%)'
+                : 'linear-gradient(180deg, transparent 0%, rgba(5,4,5,0.58) 100%)',
           }}
         />
 
         <TitleAtmosphereCanvas active />
-        <div className="film-grain absolute inset-0 opacity-85" />
-        <div className="noir-vignette absolute inset-0" />
+        <div className="film-grain absolute inset-0 opacity-75" />
+        <div
+          className={`noir-vignette absolute inset-0 ${
+            sceneMode === 'paper3d' ? 'opacity-30' : 'opacity-100'
+          }`}
+        />
       </div>
 
       {/* Top bar: live player counter on the left, audio & status on the right */}
@@ -760,6 +802,23 @@ export function HomePage() {
         <div className="ml-auto flex flex-wrap items-center gap-3 sm:gap-5 font-condensed uppercase tracking-[0.1em] text-xs text-cream-100/80">
           {bootPhase === 'ready' && (
             <>
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playMenuTick();
+                  setSceneMode((m) => (m === 'paper3d' ? 'photo' : 'paper3d'));
+                }}
+                className="inline-flex items-center gap-1.5 text-cream-100/75 hover:text-amber-300 transition"
+              >
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
+                  V
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Layers className="w-3 h-3 text-amber-300" aria-hidden="true" />
+                  {sceneMode === 'paper3d' ? '3D Paper' : 'Noir Photo'}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={replayIntro}
