@@ -1,20 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SKIP_VOTE_TARGET } from '@midnight-city/shared';
-import type { ClientPlayerView } from '@midnight-city/shared';
-import {
-  AlertCircle,
-  Check,
-  CheckCircle2,
-  Crosshair,
-  Gavel,
-  Skull,
-  Vote,
-  WifiOff,
-  X,
-} from 'lucide-react';
+import { Check, Gavel } from 'lucide-react';
 import { ChatPanel } from '../components/ChatPanel';
 import { CountdownBadge } from '../components/CountdownBadge';
+import { MidnightLoungeTable3D } from '../components/MidnightLoungeTable3D';
 import { ROLE_META, RoleSvgIcon } from '../components/RoleIcons';
 import { useGameStore } from '../stores/useGameStore';
 
@@ -45,12 +35,10 @@ export function DayTablePage({
   const phase = game.phase;
   const amAlive = Boolean(me?.isPlaying && me.isAlive);
 
-  const accuseCounts = new Map<string, string[]>();
+  const accuseCounts = new Map<string, number>();
   for (const p of alivePlayers) {
     if (p.accuseTargetId) {
-      const list = accuseCounts.get(p.accuseTargetId) ?? [];
-      list.push(p.name);
-      accuseCounts.set(p.accuseTargetId, list);
+      accuseCounts.set(p.accuseTargetId, (accuseCounts.get(p.accuseTargetId) ?? 0) + 1);
     }
   }
 
@@ -79,130 +67,12 @@ export function DayTablePage({
     ? voteResult.tally.reduce((acc, item) => acc + item.count, 0)
     : 0;
 
-  const renderSeatCard = (p: ClientPlayerView, compact: boolean) => {
-    const isMe = p.id === myPlayerId;
-    const isSpeaking = speakingPeerIds.has(p.id);
-    const accusers = accuseCounts.get(p.id) ?? [];
-    const iAccused = me?.accuseTargetId === p.id;
-    const isSelectedVote = selectedVoteTarget === p.id;
-    const eligibleVote = canVoteCandidate(p.id);
-    const isVotable =
-      phase === 'DAY_VOTE' &&
-      p.isAlive &&
-      !isMe &&
-      (vote?.voteAttempt === 1 ||
-        !vote?.revoteCandidateIds.length ||
-        vote.revoteCandidateIds.includes(p.id));
-
-    return (
-      <div
-        className={`relative rounded-2xl border transition-all ${
-          compact ? 'p-2.5 w-36' : 'p-3.5'
-        } ${
-          !p.isAlive
-            ? 'bg-noir-950/85 border-noir-800 opacity-70'
-            : isSelectedVote
-              ? 'bg-crimson-900/70 border-crimson-400 shadow-[0_0_24px_rgba(201,42,55,0.35)]'
-              : isSpeaking
-                ? 'bg-noir-800/95 border-emerald-400 shadow-[0_0_22px_rgba(52,211,153,0.45)]'
-                : 'noir-card border-gold-500/30'
-        }`}
-      >
-        {!p.isAlive && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-25"
-          >
-            <X className="w-12 h-12 text-crimson-500 stroke-[3]" />
-          </div>
-        )}
-
-        <div className="relative z-10 flex items-start justify-between gap-1.5">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1">
-              <span
-                className={`font-semibold text-xs sm:text-sm truncate ${
-                  p.isAlive ? 'text-cream-100' : 'line-through text-cream-400'
-                }`}
-              >
-                {p.name}
-              </span>
-              {isMe && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-gold-500/20 text-gold-300 shrink-0">
-                  YOU
-                </span>
-              )}
-            </div>
-            <div className="text-[10px] text-cream-400">
-              {!p.isAlive ? 'Deceased' : p.connected ? 'Alive' : 'Offline'}
-            </div>
-          </div>
-
-          {!p.isAlive ? (
-            <Skull className="w-4 h-4 text-crimson-500 shrink-0" aria-label="Dead" />
-          ) : !p.connected ? (
-            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" aria-label="Disconnected" />
-          ) : phase === 'DAY_VOTE' && p.hasVoted ? (
-            <CheckCircle2
-              className="w-4 h-4 text-emerald-400 shrink-0"
-              aria-label="Ballot cast"
-            />
-          ) : null}
-        </div>
-
-        {!p.isAlive && p.role && (
-          <div
-            className={`relative z-10 mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-semibold ${
-              ROLE_META[p.role].badgeBgClass
-            }`}
-          >
-            <RoleSvgIcon role={p.role} className="w-3 h-3" />
-            {ROLE_META[p.role].label}
-          </div>
-        )}
-
-        {p.isAlive && accusers.length > 0 && (
-          <div
-            title={`Accused by: ${accusers.join(', ')}`}
-            className="relative z-10 mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-crimson-900/75 border border-crimson-500/50 text-[10px] text-crimson-200"
-          >
-            <AlertCircle className="w-3 h-3" />
-            Accused ({accusers.length})
-          </div>
-        )}
-
-        {phase === 'DAY_DISCUSSION' && amAlive && p.isAlive && !isMe && (
-          <button
-            type="button"
-            onClick={() => void toggleAccuse(p.id)}
-            className={`relative z-10 mt-2 w-full py-1 rounded-lg text-[11px] font-semibold border inline-flex items-center justify-center gap-1 transition ${
-              iAccused
-                ? 'bg-crimson-600 border-crimson-400 text-white'
-                : 'bg-noir-900/80 border-gold-500/25 text-cream-300 hover:border-crimson-400/50'
-            }`}
-          >
-            <Crosshair className="w-3 h-3" />
-            {iAccused ? 'Accused' : 'Accuse'}
-          </button>
-        )}
-
-        {phase === 'DAY_VOTE' && isVotable && eligibleVote && (
-          <button
-            type="button"
-            onClick={() => setSelectedVoteTarget(p.id)}
-            className={`relative z-10 mt-2 w-full py-1 rounded-lg text-[11px] font-semibold border inline-flex items-center justify-center gap-1 transition ${
-              isSelectedVote
-                ? 'bg-crimson-600 border-crimson-300 text-white'
-                : 'bg-noir-900/80 border-gold-500/35 text-gold-200 hover:bg-noir-800'
-            }`}
-          >
-            <Vote className="w-3 h-3" />
-            {isSelectedVote ? 'Selected' : 'Select'}
-          </button>
-        )}
-      </div>
-    );
-  };
+  const tableMode =
+    phase === 'DAY_VOTE'
+      ? 'DAY_VOTE'
+      : phase === 'VOTE_RESULT'
+        ? 'VOTE_RESULT'
+        : 'DAY_DISCUSSION';
 
   return (
     <div className="relative z-10 max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -213,7 +83,7 @@ export function DayTablePage({
           </div>
           <h2 className="font-display text-xl sm:text-2xl text-cream-100 uppercase tracking-wider">
             {phase === 'DAY_DISCUSSION'
-              ? 'Town Hall Discussion'
+              ? 'Round Table Discussion'
               : phase === 'DAY_VOTE'
                 ? vote?.voteAttempt === 2
                   ? 'Tie-Breaker Revote'
@@ -327,51 +197,32 @@ export function DayTablePage({
         </motion.section>
       )}
 
+      <MidnightLoungeTable3D
+        players={playingPlayers}
+        myPlayerId={myPlayerId}
+        mode={tableMode}
+        viewerIsHost={Boolean(me?.isHost)}
+        speakingPeerIds={speakingPeerIds}
+        accuseCounts={accuseCounts}
+        myAccuseTargetId={me?.accuseTargetId ?? null}
+        selectedVoteTarget={selectedVoteTarget}
+        canAccuse={phase === 'DAY_DISCUSSION' && amAlive}
+        canVoteCandidate={canVoteCandidate}
+        onToggleAccuse={(id) => void toggleAccuse(id)}
+        onSelectVote={(id) => setSelectedVoteTarget(id)}
+        centerTitle={`Round Table (${alivePlayers.length}/${playingPlayers.length} Alive)`}
+        centerSubtitle={
+          phase === 'DAY_DISCUSSION'
+            ? 'Sit around the table, debate & accuse'
+            : phase === 'DAY_VOTE'
+              ? 'Select a card above a cushion, then confirm below'
+              : 'Verdict complete'
+        }
+      />
+
       <div className="grid lg:grid-cols-12 gap-6 items-start">
         <div className="lg:col-span-7 space-y-4">
-          <div className="hidden md:block relative w-full h-[34rem] noir-card rounded-3xl overflow-hidden">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 rounded-full border-2 border-gold-500/30 bg-gradient-to-br from-noir-800/95 to-noir-950/95 shadow-[inset_0_0_50px_rgba(0,0,0,0.75)] flex flex-col items-center justify-center text-center p-4">
-              <div className="text-[10px] uppercase tracking-[0.3em] text-gold-400">
-                Midnight Table
-              </div>
-              <div className="font-display text-lg text-gold-200 font-bold uppercase mt-1">
-                {alivePlayers.length} / {playingPlayers.length} Alive
-              </div>
-              <div className="text-xs text-cream-300 mt-1">
-                {phase === 'DAY_DISCUSSION'
-                  ? 'Debate & Accuse'
-                  : phase === 'DAY_VOTE'
-                    ? 'Cast Your Ballot'
-                    : 'Count Complete'}
-              </div>
-            </div>
-
-            {playingPlayers.map((p, idx) => {
-              const angle =
-                (idx / Math.max(1, playingPlayers.length)) * Math.PI * 2 - Math.PI / 2;
-              const radiusX = playingPlayers.length > 10 ? 40 : 37;
-              const radiusY = playingPlayers.length > 10 ? 39 : 37;
-              const leftPct = 50 + radiusX * Math.cos(angle);
-              const topPct = 50 + radiusY * Math.sin(angle);
-              return (
-                <div
-                  key={p.id}
-                  style={{ left: `${leftPct}%`, top: `${topPct}%` }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
-                >
-                  {renderSeatCard(p, true)}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 md:hidden">
-            {playingPlayers.map((p) => (
-              <React.Fragment key={p.id}>{renderSeatCard(p, false)}</React.Fragment>
-            ))}
-          </div>
-
-          {phase === 'DAY_VOTE' && amAlive && vote && (
+          {phase === 'DAY_VOTE' && amAlive && vote ? (
             <div className="noir-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
               {vote.myVote !== null ? (
                 <div className="flex items-center gap-2 text-emerald-300 text-sm font-medium">
@@ -400,7 +251,7 @@ export function DayTablePage({
                         ? 'Skipping elimination'
                         : selectedVoteTarget
                           ? `Target: ${playerMap.get(selectedVoteTarget)?.name}`
-                          : 'Tap a suspect to select'}
+                          : 'Select a card around the 3D table'}
                     </span>
                   </div>
                   <button
@@ -413,6 +264,14 @@ export function DayTablePage({
                   </button>
                 </>
               )}
+            </div>
+          ) : (
+            <div className="noir-card rounded-2xl p-4 text-xs text-cream-300 flex items-center justify-between">
+              <span>
+                {amAlive
+                  ? 'Orbit the table to inspect all player cards and accusations.'
+                  : 'You are spectating from the shadows. Ghost chat is open if enabled.'}
+              </span>
             </div>
           )}
         </div>

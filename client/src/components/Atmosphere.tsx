@@ -33,13 +33,18 @@ export function Atmosphere({ phase }: { phase: GamePhase | 'HOME' }) {
       )}
 
       {(isDawn || isDay) && (
-        <div
-          className={`absolute left-1/2 -translate-x-1/2 transition-all duration-1000 rounded-full blur-2xl ${
-            isDawn
-              ? 'bottom-[14%] w-72 h-72 bg-amber-500/35'
-              : 'top-[4%] w-64 h-64 bg-gold-300/15'
-          }`}
-        />
+        <>
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 transition-all duration-1000 rounded-full blur-2xl ${
+              isDawn
+                ? 'bottom-[14%] w-72 h-72 bg-amber-500/35'
+                : 'top-[4%] w-72 h-72 bg-gold-300/20'
+            }`}
+          />
+          {isDay && (
+            <div className="absolute inset-x-0 bottom-0 h-60 bg-gradient-to-t from-amber-500/15 via-gold-400/5 to-transparent" />
+          )}
+        </>
       )}
 
       <div className="absolute -bottom-12 left-[-10%] right-[-10%] h-48 bg-gradient-to-t from-cream-300/10 via-cream-300/5 to-transparent blur-2xl animate-fog" />
@@ -69,16 +74,30 @@ export function Atmosphere({ phase }: { phase: GamePhase | 'HOME' }) {
           fill="currentColor"
           d="M0,260 L0,160 L55,160 L55,115 L105,115 L105,175 L145,175 L145,80 L165,62 L185,80 L185,150 L235,150 L235,105 L295,105 L295,180 L345,180 L345,52 L370,34 L395,52 L395,140 L450,140 L450,120 L510,120 L510,175 L560,175 L560,90 L615,90 L615,155 L670,155 L670,40 L692,20 L714,40 L714,148 L770,148 L770,110 L835,110 L835,182 L890,182 L890,70 L945,70 L945,145 L1005,145 L1005,98 L1065,98 L1065,170 L1110,170 L1110,48 L1132,26 L1154,48 L1154,152 L1220,152 L1220,112 L1280,112 L1280,175 L1335,175 L1335,92 L1395,92 L1395,160 L1440,160 L1440,260 Z"
         />
-        <g className={isNight ? 'animate-window-blink' : 'opacity-65'}>
-          <rect x="155" y="95" width="8" height="10" fill="#e8c67a" opacity="0.55" />
-          <rect x="169" y="112" width="8" height="10" fill="#e8c67a" opacity="0.4" />
-          <rect x="358" y="75" width="9" height="12" fill="#e8c67a" opacity="0.65" />
-          <rect x="373" y="96" width="9" height="12" fill="#e8c67a" opacity="0.45" />
-          <rect x="684" y="65" width="10" height="12" fill="#e8c67a" opacity="0.6" />
-          <rect x="684" y="88" width="10" height="12" fill="#e8c67a" opacity="0.35" />
-          <rect x="905" y="92" width="9" height="11" fill="#e8c67a" opacity="0.5" />
-          <rect x="1125" y="70" width="9" height="12" fill="#e8c67a" opacity="0.65" />
-          <rect x="1352" y="112" width="8" height="11" fill="#e8c67a" opacity="0.5" />
+        <g>
+          {[
+            { x: 155, y: 95, w: 8, h: 10, delay: '0.2s', op: 0.55 },
+            { x: 169, y: 112, w: 8, h: 10, delay: '1.8s', op: 0.45 },
+            { x: 358, y: 75, w: 9, h: 12, delay: '0.7s', op: 0.65 },
+            { x: 373, y: 96, w: 9, h: 12, delay: '2.9s', op: 0.45 },
+            { x: 684, y: 65, w: 10, h: 12, delay: '1.1s', op: 0.6 },
+            { x: 684, y: 88, w: 10, h: 12, delay: '3.6s', op: 0.4 },
+            { x: 905, y: 92, w: 9, h: 11, delay: '2.2s', op: 0.55 },
+            { x: 1125, y: 70, w: 9, h: 12, delay: '0.5s', op: 0.65 },
+            { x: 1352, y: 112, w: 8, h: 11, delay: '3.1s', op: 0.5 },
+          ].map((win, idx) => (
+            <rect
+              key={idx}
+              x={win.x}
+              y={win.y}
+              width={win.w}
+              height={win.h}
+              fill="#e8c67a"
+              opacity={isNight ? undefined : win.op}
+              style={isNight ? { animationDelay: win.delay } : undefined}
+              className={isNight ? 'animate-window-blink' : undefined}
+            />
+          ))}
         </g>
       </svg>
 

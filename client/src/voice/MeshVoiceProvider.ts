@@ -37,6 +37,7 @@ export class MeshVoiceProvider implements VoiceProvider {
   private localSource: MediaStreamAudioSourceNode | null = null;
   private analyserTimer: number | null = null;
   private connected = false;
+  private lastReportedMicActive: boolean | null = null;
 
   subscribe(callbacks: VoiceProviderCallbacks): () => void {
     this.callbacks = callbacks;
@@ -150,7 +151,10 @@ export class MeshVoiceProvider implements VoiceProvider {
     }
 
     this.callbacks?.onSpeakingChange(new Set());
-    this.callbacks?.onLocalMicActiveChange(false);
+    if (this.lastReportedMicActive === true) {
+      this.callbacks?.onLocalMicActiveChange(false);
+    }
+    this.lastReportedMicActive = null;
     this.callbacks?.onAutoplayBlocked(false);
   }
 
@@ -221,14 +225,20 @@ export class MeshVoiceProvider implements VoiceProvider {
   }
 
   private syncTrackEnabled(): void {
+    if (!this.connected) {
+      return;
+    }
     const allowedByServer = this.voiceState ? this.voiceState.canSpeak : true;
-    const active = this.connected && allowedByServer && !this.userMicMuted;
+    const active = allowedByServer && !this.userMicMuted;
     if (this.localStream) {
       for (const track of this.localStream.getAudioTracks()) {
         track.enabled = active;
       }
     }
-    this.callbacks?.onLocalMicActiveChange(active);
+    if (active !== this.lastReportedMicActive) {
+      this.lastReportedMicActive = active;
+      this.callbacks?.onLocalMicActiveChange(active);
+    }
   }
 
   private applyAllPeerAudioPolicies(): void {

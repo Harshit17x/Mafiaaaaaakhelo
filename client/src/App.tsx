@@ -6,6 +6,7 @@ import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
 import { GodViewPanel } from './components/GodViewPanel';
 import { HostControlsBar } from './components/HostControlsBar';
+import { RolePeekChip } from './components/RolePeekChip';
 import { RulesModal } from './components/RulesModal';
 import { VoiceControlsBar } from './components/VoiceControlsBar';
 import { DawnPage } from './pages/DawnPage';
@@ -133,6 +134,7 @@ export function App() {
               </span>
             )}
 
+            <RolePeekChip />
             <AudioControls />
 
             <button

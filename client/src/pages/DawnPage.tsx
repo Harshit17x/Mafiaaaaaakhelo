@@ -61,7 +61,12 @@ export function DawnPage() {
         </div>
 
         {killed && dawn.killedPlayerRole && (
-          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-noir-950/80 border border-gold-500/35">
+          <motion.div
+            initial={{ rotateY: 90, opacity: 0 }}
+            animate={{ rotateY: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.25 }}
+            className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-noir-950/80 border border-gold-500/35"
+          >
             <RoleSvgIcon
               role={dawn.killedPlayerRole}
               className={`w-9 h-9 ${ROLE_META[dawn.killedPlayerRole].colorClass}`}
@@ -78,7 +83,7 @@ export function DawnPage() {
                 {ROLE_META[dawn.killedPlayerRole].label}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div className="pt-2 flex justify-center">

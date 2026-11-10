@@ -1321,6 +1321,9 @@ export class RoomManager {
       return { ok: false, error: 'You are not in a room.' };
     }
     const { room, player } = ctx;
+    if (player.voiceJoined === joined) {
+      return { ok: true };
+    }
     room.players = room.players.map((p) =>
       p.id === player.id
         ? { ...p, voiceJoined: joined, micEnabled: joined ? p.micEnabled : false }
@@ -1337,6 +1340,9 @@ export class RoomManager {
       return { ok: false, error: 'You are not in a room.' };
     }
     const { room, player } = ctx;
+    if (player.micEnabled === enabled) {
+      return { ok: true };
+    }
     room.players = room.players.map((p) =>
       p.id === player.id ? { ...p, micEnabled: enabled } : p
     );
