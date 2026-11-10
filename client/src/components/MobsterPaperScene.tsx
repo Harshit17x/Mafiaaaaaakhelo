@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 
 interface MobsterPaperSceneProps {
   tiltX?: number;
@@ -6,10 +6,56 @@ interface MobsterPaperSceneProps {
   className?: string;
 }
 
+interface SmokePuff {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  rotation: number;
+  vRot: number;
+  age: number;
+  maxAge: number;
+  seed: number;
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 /**
- * Renders the 2D paper-cut mobster illustration split across 6 true CSS 3D
- * Z-depth planes (`translateZ`) so the fedora brim, lapels, hand, crystal
- * whiskey glass, and rising smoke physically pop out of the shadowbox frame.
+ * Computes normalized drinking progress in [0, 1] across a 7.2s cycle:
+ * 0.00-0.25: resting at table
+ * 0.25-0.44: lifting glass to lips
+ * 0.44-0.61: sipping (tilted glass + slight head tilt)
+ * 0.61-0.80: returning glass smoothly to table
+ * 0.80-1.00: resting at table
+ */
+function getDrinkProgress(cyclePhase: number): { lift: number; sip: number } {
+  if (cyclePhase < 0.25) {
+    return { lift: 0, sip: 0 };
+  }
+  if (cyclePhase < 0.44) {
+    const t = (cyclePhase - 0.25) / 0.19;
+    const e = easeInOutCubic(t);
+    return { lift: e, sip: Math.max(0, (e - 0.55) / 0.45) };
+  }
+  if (cyclePhase < 0.61) {
+    const t = (cyclePhase - 0.44) / 0.17;
+    const microSip = Math.sin(t * Math.PI);
+    return { lift: 1, sip: 1 + microSip * 0.18 };
+  }
+  if (cyclePhase < 0.8) {
+    const t = (cyclePhase - 0.61) / 0.19;
+    const e = 1 - easeInOutCubic(t);
+    return { lift: e, sip: Math.max(0, (e - 0.55) / 0.45) };
+  }
+  return { lift: 0, sip: 0 };
+}
+
+/**
+ * Renders the 2D paper-cut mobster illustration split across Z-depth planes
+ * (`translateZ`) with real-time fluid smoke physics and a smooth drinking animation.
  */
 export function MobsterPaperScene({
   tiltX = 0,
@@ -18,6 +64,293 @@ export function MobsterPaperScene({
 }: MobsterPaperSceneProps) {
   const rawId = useId();
   const uid = rawId.replace(/:/g, '');
+
+  const faceGroupRef = useRef<SVGGElement | null>(null);
+  const crownGroupRef = useRef<SVGGElement | null>(null);
+  const brimGroupRef = useRef<SVGGElement | null>(null);
+  const handGlassGroupRef = useRef<SVGGElement | null>(null);
+  const liquidGroupRef = useRef<SVGGElement | null>(null);
+  const armSleevePathRef = useRef<SVGPathElement | null>(null);
+  const armSleeveStripeRef = useRef<SVGPathElement | null>(null);
+  const armRimPathRef = useRef<SVGPathElement | null>(null);
+  const cuffPathRef = useRef<SVGPathElement | null>(null);
+  const tableReflectionRef = useRef<SVGEllipseElement | null>(null);
+  const emberCoreRef = useRef<SVGCircleElement | null>(null);
+  const emberHaloRef = useRef<SVGEllipseElement | null>(null);
+  const smokeFilamentARef = useRef<SVGPathElement | null>(null);
+  const smokeFilamentBRef = useRef<SVGPathElement | null>(null);
+  const smokePuffRefs = useRef<Array<SVGEllipseElement | null>>([]);
+
+  useEffect(() => {
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    const puffs: SmokePuff[] = Array.from({ length: 16 }, (_, idx) => {
+      const age = (idx / 16) * 4.4;
+      return {
+        x: 574 + Math.sin(idx * 1.4) * 8,
+        y: 912 - age * 78,
+        vx: (Math.random() - 0.45) * 6,
+        vy: -(72 + Math.random() * 14),
+        radius: 5 + age * 6.5,
+        rotation: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 28,
+        age,
+        maxAge: 4.4 + (idx % 3) * 0.4,
+        seed: idx * 1.73,
+      };
+    });
+
+    // Laminar-to-turbulent spine sample heights from ember (y=912) upward
+    const SPINE_STEPS = 18;
+    const CYCLE_MS = 7200;
+    const startMs = performance.now();
+    let prevMs = startMs;
+    let rafId = 0;
+
+    const frame = (nowMs: number) => {
+      if (document.hidden) {
+        prevMs = nowMs;
+        rafId = window.requestAnimationFrame(frame);
+        return;
+      }
+
+      const dt = Math.min(0.05, Math.max(0.001, (nowMs - prevMs) / 1000));
+      prevMs = nowMs;
+      const tSec = (nowMs - startMs) / 1000;
+
+      // 1. Update fluid smoke physics (buoyancy + Kelvin-Helmholtz eddies + dissipation)
+      const emberPulse = 0.72 + 0.28 * Math.sin(tSec * 2.4) + 0.1 * Math.sin(tSec * 6.1);
+      if (emberCoreRef.current) {
+        emberCoreRef.current.setAttribute('opacity', Math.min(1, emberPulse).toFixed(3));
+        emberCoreRef.current.setAttribute('r', (2.6 + emberPulse * 1.1).toFixed(2));
+      }
+      if (emberHaloRef.current) {
+        emberHaloRef.current.setAttribute('opacity', (0.65 + emberPulse * 0.35).toFixed(3));
+      }
+
+      // Build dual curling fluid smoke ribbon paths using buoyant wave advection
+      const buildRibbonPath = (phaseOffset: number, baseWidth: number, driftBias: number) => {
+        const leftPts: Array<[number, number]> = [];
+        const rightPts: Array<[number, number]> = [];
+
+        for (let i = 0; i <= SPINE_STEPS; i += 1) {
+          const frac = i / SPINE_STEPS; // 0 at ember, 1 at top dissipation
+          const h = frac * 395;
+          const y = 912 - h;
+
+          // Laminar near ember (frac < 0.18), growing curl eddies higher up
+          const turbulence = Math.pow(frac, 1.35);
+          const wave1 = Math.sin(tSec * 2.05 - frac * 7.6 + phaseOffset) * (3 + 34 * turbulence);
+          const wave2 = Math.cos(tSec * 3.35 - frac * 12.2 + phaseOffset * 1.7) * (1.5 + 15 * turbulence);
+          const cx = 574 + driftBias * frac * 22 + wave1 + wave2;
+
+          // Plume expands thermally as it rises and mixes with ambient air
+          const halfW = baseWidth * (0.28 + 1.45 * Math.pow(frac, 0.85)) * (1 - 0.32 * Math.pow(frac, 3));
+          leftPts.push([cx - halfW, y]);
+          rightPts.push([cx + halfW, y]);
+        }
+
+        let d = `M${leftPts[0]![0].toFixed(1)},${leftPts[0]![1].toFixed(1)}`;
+        for (let i = 1; i < leftPts.length; i += 1) {
+          const [px, py] = leftPts[i - 1]!;
+          const [nx, ny] = leftPts[i]!;
+          const mx = ((px + nx) / 2).toFixed(1);
+          const my = ((py + ny) / 2).toFixed(1);
+          d += ` Q${px.toFixed(1)},${py.toFixed(1)} ${mx},${my}`;
+        }
+        const [topRx, topRy] = rightPts[rightPts.length - 1]!;
+        d += ` L${topRx.toFixed(1)},${topRy.toFixed(1)}`;
+        for (let i = rightPts.length - 2; i >= 0; i -= 1) {
+          const [px, py] = rightPts[i + 1]!;
+          const [nx, ny] = rightPts[i]!;
+          const mx = ((px + nx) / 2).toFixed(1);
+          const my = ((py + ny) / 2).toFixed(1);
+          d += ` Q${px.toFixed(1)},${py.toFixed(1)} ${mx},${my}`;
+        }
+        d += ' Z';
+        return d;
+      };
+
+      if (smokeFilamentARef.current) {
+        smokeFilamentARef.current.setAttribute('d', buildRibbonPath(0, 12.5, 0.8));
+      }
+      if (smokeFilamentBRef.current) {
+        smokeFilamentBRef.current.setAttribute('d', buildRibbonPath(2.2, 9.5, -0.45));
+      }
+
+      // Advect buoyant paper-cut vortex puffs
+      for (let i = 0; i < puffs.length; i += 1) {
+        const p = puffs[i]!;
+        p.age += dt;
+        if (p.age >= p.maxAge) {
+          p.age = 0;
+          p.x = 574 + (Math.random() - 0.5) * 4;
+          p.y = 908;
+          p.vx = (Math.random() - 0.35) * 8;
+          p.vy = -(76 + Math.random() * 14);
+          p.radius = 4.5 + Math.random() * 2.5;
+          p.rotation = Math.random() * 360;
+        }
+
+        const life = p.age / p.maxAge;
+        // Buoyancy decelerates smoothly as warm smoke cools, while curl turbulence grows
+        const currentVy = p.vy * (1 - life * 0.44);
+        const curlVx =
+          Math.sin(tSec * 2.2 + p.seed + life * 6.5) * (12 + 28 * life) +
+          Math.cos(tSec * 3.6 + p.seed * 1.3) * (8 * life);
+
+        p.x += (p.vx + curlVx) * dt;
+        p.y += currentVy * dt;
+        p.radius += (6.5 + life * 7.5) * dt;
+        p.rotation += p.vRot * dt;
+
+        const el = smokePuffRefs.current[i];
+        if (el) {
+          const alpha = Math.sin(life * Math.PI) * Math.pow(1 - life, 0.55) * 0.34;
+          el.setAttribute('cx', p.x.toFixed(1));
+          el.setAttribute('cy', p.y.toFixed(1));
+          el.setAttribute('rx', p.radius.toFixed(1));
+          el.setAttribute('ry', (p.radius * 0.72).toFixed(1));
+          el.setAttribute(
+            'transform',
+            `rotate(${p.rotation.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})`
+          );
+          el.setAttribute('opacity', Math.max(0, alpha).toFixed(3));
+        }
+      }
+
+      // 2. Update synchronized drinking animation
+      const cyclePhase = ((nowMs - startMs) % CYCLE_MS) / CYCLE_MS;
+      const { lift, sip } = getDrinkProgress(cyclePhase);
+
+      const glassTx = 26 * lift;
+      const glassTy = -432 * lift;
+      const glassAngleDeg = 21.5 * lift + 2.5 * Math.max(0, sip - 1);
+
+      if (handGlassGroupRef.current) {
+        handGlassGroupRef.current.setAttribute(
+          'transform',
+          `translate(${glassTx.toFixed(2)}, ${glassTy.toFixed(2)}) rotate(${glassAngleDeg.toFixed(
+            2
+          )}, 368, 788)`
+        );
+      }
+
+      // Gravity keeps bourbon surface horizontal inside the tilted glass
+      if (liquidGroupRef.current) {
+        const sipDip = Math.max(0, sip) * 4;
+        liquidGroupRef.current.setAttribute(
+          'transform',
+          `translate(0, ${sipDip.toFixed(2)}) rotate(${(-glassAngleDeg).toFixed(2)}, 344, 888)`
+        );
+      }
+
+      // Subtle tabletop reflection fades as glass lifts off the mahogany surface
+      if (tableReflectionRef.current) {
+        tableReflectionRef.current.setAttribute('opacity', (0.34 * (1 - lift * 0.85)).toFixed(3));
+      }
+
+      // Head & fedora tilt subtly back during the sip so rim meets his lips naturally
+      const headLiftY = -8 * sip;
+      const headAngle = -3.2 * sip;
+      const headTransform = `translate(0, ${headLiftY.toFixed(2)}) rotate(${headAngle.toFixed(
+        2
+      )}, 382, 360)`;
+      if (faceGroupRef.current) {
+        faceGroupRef.current.setAttribute('transform', headTransform);
+      }
+      if (crownGroupRef.current) {
+        crownGroupRef.current.setAttribute('transform', headTransform);
+      }
+      if (brimGroupRef.current) {
+        brimGroupRef.current.setAttribute('transform', headTransform);
+      }
+
+      // Dynamically morph pinstripe forearm sleeve so cuff stays locked to wrist
+      const rad = (glassAngleDeg * Math.PI) / 180;
+      const vx = 180 - 368;
+      const vy = 860 - 788;
+      const wristX = 368 + glassTx + vx * Math.cos(rad) - vy * Math.sin(rad);
+      const wristY = 788 + glassTy + vx * Math.sin(rad) + vy * Math.cos(rad);
+
+      const elbowX = 52 + 34 * lift;
+      const elbowY = 824 - 118 * lift;
+      const dx = wristX - elbowX;
+      const dy = wristY - elbowY;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      // Normal perpendicular to forearm axis (pointing upward/outward)
+      const nx = dy / len;
+      const ny = -dx / len;
+
+      const eTopX = elbowX + nx * 56 - (dx / len) * 26;
+      const eTopY = elbowY + ny * 56 - (dy / len) * 26;
+      const eBotX = elbowX - nx * 62 - (dx / len) * 22;
+      const eBotY = elbowY - ny * 62 - (dy / len) * 22;
+
+      const wTopX = wristX + nx * 42;
+      const wTopY = wristY + ny * 42;
+      const wBotX = wristX - nx * 46;
+      const wBotY = wristY - ny * 46;
+
+      const midTopX = (eTopX + wTopX) / 2 + nx * 12;
+      const midTopY = (eTopY + wTopY) / 2 + ny * 12;
+      const midBotX = (eBotX + wBotX) / 2 - nx * 10;
+      const midBotY = (eBotY + wBotY) / 2 - ny * 10;
+
+      const sleeveD = `M${eTopX.toFixed(1)},${eTopY.toFixed(1)} Q${midTopX.toFixed(
+        1
+      )},${midTopY.toFixed(1)} ${wTopX.toFixed(1)},${wTopY.toFixed(1)} L${wBotX.toFixed(
+        1
+      )},${wBotY.toFixed(1)} Q${midBotX.toFixed(1)},${midBotY.toFixed(1)} ${eBotX.toFixed(
+        1
+      )},${eBotY.toFixed(1)} Q${(elbowX - (dx / len) * 44).toFixed(1)},${(
+        elbowY -
+        (dy / len) * 44
+      ).toFixed(1)} ${eTopX.toFixed(1)},${eTopY.toFixed(1)} Z`;
+
+      const rimD = `M${eTopX.toFixed(1)},${eTopY.toFixed(1)} Q${midTopX.toFixed(
+        1
+      )},${midTopY.toFixed(1)} ${wTopX.toFixed(1)},${wTopY.toFixed(1)} L${(
+        wTopX -
+        nx * 8
+      ).toFixed(1)},${(wTopY - ny * 8).toFixed(1)} Q${(midTopX - nx * 8).toFixed(1)},${(
+        midTopY -
+        ny * 8
+      ).toFixed(1)} ${(eTopX - nx * 10).toFixed(1)},${(eTopY - ny * 10).toFixed(1)} Z`;
+
+      const cuffUx = dx / len;
+      const cuffUy = dy / len;
+      const cuffD = `M${(wTopX - cuffUx * 16).toFixed(1)},${(wTopY - cuffUy * 16).toFixed(
+        1
+      )} L${(wTopX + cuffUx * 10).toFixed(1)},${(wTopY + cuffUy * 10).toFixed(1)} L${(
+        wBotX +
+        cuffUx * 10
+      ).toFixed(1)},${(wBotY + cuffUy * 10).toFixed(1)} L${(wBotX - cuffUx * 16).toFixed(
+        1
+      )},${(wBotY - cuffUy * 16).toFixed(1)} Z`;
+
+      if (armSleevePathRef.current) {
+        armSleevePathRef.current.setAttribute('d', sleeveD);
+      }
+      if (armSleeveStripeRef.current) {
+        armSleeveStripeRef.current.setAttribute('d', sleeveD);
+      }
+      if (armRimPathRef.current) {
+        armRimPathRef.current.setAttribute('d', rimD);
+      }
+      if (cuffPathRef.current) {
+        cuffPathRef.current.setAttribute('d', cuffD);
+      }
+
+      rafId = window.requestAnimationFrame(frame);
+    };
+
+    rafId = window.requestAnimationFrame(frame);
+    return () => window.cancelAnimationFrame(rafId);
+  }, []);
 
   const ids = {
     paperGrain: `mp-grain-${uid}`,
@@ -47,15 +380,16 @@ export function MobsterPaperScene({
     pinRight: `mp-pin-r-${uid}`,
     stubble: `mp-stubble-${uid}`,
     boxClip: `mp-clip-${uid}`,
+    glassClip: `mp-glass-clip-${uid}`,
   };
 
   return (
     <div
       className={`relative select-none ${className}`}
       style={{ perspective: '1200px' }}
-      aria-label="3D layered paper-cut illustration of the Midnight City mobster"
+      aria-label="3D layered paper-cut illustration of the Midnight City mobster drinking whiskey with rising cigar smoke"
     >
-      {/* Hidden shared SVG defs referenced cleanly across all 6 Z-depth SVG planes */}
+      {/* Shared SVG defs */}
       <svg width="0" height="0" className="absolute pointer-events-none" aria-hidden="true">
         <defs>
           <filter id={ids.paperGrain} x="0%" y="0%" width="100%" height="100%">
@@ -98,8 +432,8 @@ export function MobsterPaperScene({
             <feGaussianBlur stdDeviation="4" />
           </filter>
 
-          <filter id={ids.smokeBlur} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.4" />
+          <filter id={ids.smokeBlur} x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="2.2" />
           </filter>
 
           <linearGradient id={ids.bgWall} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -177,16 +511,17 @@ export function MobsterPaperScene({
             <stop offset="100%" stopColor="#090503" />
           </linearGradient>
 
-          <linearGradient id={ids.smokeA} x1="0%" y1="100%" x2="55%" y2="0%">
-            <stop offset="0%" stopColor="#83a1c2" stopOpacity="0.52" />
-            <stop offset="55%" stopColor="#9cb7d4" stopOpacity="0.34" />
-            <stop offset="100%" stopColor="#bdd1e8" stopOpacity="0.06" />
+          <linearGradient id={ids.smokeA} x1="0%" y1="100%" x2="40%" y2="0%">
+            <stop offset="0%" stopColor="#9ab8d9" stopOpacity="0.62" />
+            <stop offset="45%" stopColor="#8caac9" stopOpacity="0.38" />
+            <stop offset="85%" stopColor="#b5cce6" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#cde0f5" stopOpacity="0" />
           </linearGradient>
 
-          <linearGradient id={ids.smokeB} x1="10%" y1="100%" x2="80%" y2="0%">
-            <stop offset="0%" stopColor="#6c8aa9" stopOpacity="0.42" />
-            <stop offset="65%" stopColor="#8ea8c4" stopOpacity="0.24" />
-            <stop offset="100%" stopColor="#b5cae0" stopOpacity="0.04" />
+          <linearGradient id={ids.smokeB} x1="10%" y1="100%" x2="70%" y2="0%">
+            <stop offset="0%" stopColor="#7796b8" stopOpacity="0.48" />
+            <stop offset="55%" stopColor="#93afc9" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#bfd3ea" stopOpacity="0" />
           </linearGradient>
 
           <pattern id={ids.pinLeft} width="11" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(7)">
@@ -204,6 +539,10 @@ export function MobsterPaperScene({
 
           <clipPath id={ids.boxClip}>
             <rect x="74" y="88" width="612" height="842" rx="14" />
+          </clipPath>
+
+          <clipPath id={ids.glassClip}>
+            <path d="M261,791 L427,791 L411,962 Q344,974 277,962 Z" />
           </clipPath>
         </defs>
       </svg>
@@ -281,15 +620,15 @@ export function MobsterPaperScene({
           </g>
 
           <g filter={`url(#${ids.shadowMid})`}>
-            <polygon points="282,354 484,340 434,786 352,806" fill="#0f0d0c" />
-            <path d="M298,350 L466,340 L438,778 L346,796 L314,586 Z" fill={`url(#${ids.shirtGrad})`} />
+            <polygon points="282,354 484,340 426,920 356,920" fill="#0f0d0c" />
+            <path d="M298,350 L466,340 L424,918 L354,918 L314,586 Z" fill={`url(#${ids.shirtGrad})`} />
             <path d="M326,288 L444,284 L448,370 L386,444 L322,370 Z" fill="#4f3526" />
             <path d="M326,288 L444,284 L444,354 Q388,392 324,350 Z" fill="#20140e" opacity="0.74" />
             <path d="M408,334 L440,316 L442,368 L400,418 Z" fill="#7c543c" opacity="0.62" />
             <g filter={`url(#${ids.shadowCrisp})`}>
               <path d="M366,402 L406,400 L398,448 L372,448 Z" fill="#171514" />
-              <path d="M372,448 L398,448 L418,718 L385,758 L354,718 Z" fill="#131110" />
-              <path d="M388,448 L398,448 L416,718 L385,758 Z" fill="#25221f" opacity="0.52" />
+              <path d="M372,448 L398,448 L414,916 L358,916 Z" fill="#131110" />
+              <path d="M388,448 L398,448 L412,916 L386,916 Z" fill="#25221f" opacity="0.52" />
             </g>
             <path d="M320,340 L368,408 L314,458 L294,398 Z" fill="#3a3631" filter={`url(#${ids.shadowCrisp})`} />
             <path d="M446,332 L470,394 L442,452 L402,404 Z" fill="#48413a" filter={`url(#${ids.shadowCrisp})`} />
@@ -297,13 +636,13 @@ export function MobsterPaperScene({
           </g>
 
           <g filter={`url(#${ids.shadowCrisp})`}>
-            <path d="M280,346 L228,454 L258,480 L236,512 L344,784 L356,768 L298,450 L294,346 Z" fill={`url(#${ids.lapelLeft})`} />
-            <path d="M280,346 L228,454 L258,480 L236,512 L344,784 L356,768 L298,450 L294,346 Z" fill={`url(#${ids.pinLeft})`} opacity="0.85" />
-            <path d="M228,454 L258,480 L236,512 L344,784 L340,787 L231,512 L252,480 L224,455 Z" fill="#63574c" opacity="0.55" />
+            <path d="M280,346 L228,454 L258,480 L236,512 L364,916 L378,916 L298,450 L294,346 Z" fill={`url(#${ids.lapelLeft})`} />
+            <path d="M280,346 L228,454 L258,480 L236,512 L364,916 L378,916 L298,450 L294,346 Z" fill={`url(#${ids.pinLeft})`} opacity="0.85" />
+            <path d="M228,454 L258,480 L236,512 L364,916 L360,916 L231,512 L252,480 L224,455 Z" fill="#63574c" opacity="0.55" />
 
-            <path d="M472,334 L528,444 L498,470 L522,502 L416,780 L404,766 L454,446 L460,334 Z" fill={`url(#${ids.lapelRight})`} />
-            <path d="M472,334 L528,444 L498,470 L522,502 L416,780 L404,766 L454,446 L460,334 Z" fill={`url(#${ids.pinRight})`} opacity="0.9" />
-            <path d="M528,444 L498,470 L522,502 L416,780 L420,783 L527,502 L504,470 L532,445 Z" fill="#8f755d" opacity="0.65" />
+            <path d="M472,334 L528,444 L498,470 L522,502 L402,916 L388,916 L454,446 L460,334 Z" fill={`url(#${ids.lapelRight})`} />
+            <path d="M472,334 L528,444 L498,470 L522,502 L402,916 L388,916 L454,446 L460,334 Z" fill={`url(#${ids.pinRight})`} opacity="0.9" />
+            <path d="M528,444 L498,470 L522,502 L402,916 L406,916 L527,502 L504,470 L532,445 Z" fill="#8f755d" opacity="0.65" />
           </g>
         </svg>
 
@@ -314,7 +653,7 @@ export function MobsterPaperScene({
           style={{ transform: 'translateZ(30px)' }}
           aria-hidden="true"
         >
-          <g filter={`url(#${ids.shadowMid})`}>
+          <g ref={faceGroupRef} filter={`url(#${ids.shadowMid})`}>
             <path d="M484,200 Q516,194 514,230 Q512,262 484,270 L476,226 Z" fill="#6c4833" />
             <path d="M490,210 Q506,208 504,234 Q502,252 488,258 Z" fill="#281810" opacity="0.78" />
             <path d="M506,204 Q515,222 504,254" fill="none" stroke="#b98360" strokeWidth="2.5" strokeLinecap="round" opacity="0.72" />
@@ -365,7 +704,7 @@ export function MobsterPaperScene({
           style={{ transform: 'translateZ(52px)' }}
           aria-hidden="true"
         >
-          <g filter={`url(#${ids.shadowBack})`}>
+          <g ref={crownGroupRef} filter={`url(#${ids.shadowBack})`}>
             <path
               d="M206,176 L246,60 Q258,34 290,44 Q328,55 362,34 Q404,12 436,32 Q456,44 478,136 Q344,174 206,176 Z"
               fill={`url(#${ids.crownGrad})`}
@@ -388,7 +727,7 @@ export function MobsterPaperScene({
           style={{ transform: 'translateZ(78px)' }}
           aria-hidden="true"
         >
-          <g filter={`url(#${ids.shadowPop})`}>
+          <g ref={brimGroupRef} filter={`url(#${ids.shadowPop})`}>
             <path
               d="M112,248 Q216,250 342,218 Q480,184 598,116 Q574,150 480,188 Q344,236 190,260 Q140,264 112,248 Z"
               fill="#1e1c1a"
@@ -405,37 +744,120 @@ export function MobsterPaperScene({
           </g>
         </svg>
 
-        {/* PLANE 6 (Closest Pop-Out: z = 98px): Mahogany Table, Arm, Hand, Crystal Whiskey Glass, Cigar & Smoke */}
+        {/* PLANE 6A (z = 90px): Mahogany Tabletop, Crystal Ashtray, Cigar Ember & Real Physics Smoke */}
         <svg
           viewBox="0 0 760 1000"
           className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
-          style={{ transform: 'translateZ(98px)' }}
+          style={{ transform: 'translateZ(90px)' }}
           aria-hidden="true"
         >
           <g filter={`url(#${ids.shadowPop})`}>
             <path d="M18,906 L742,882 L756,996 L4,996 Z" fill={`url(#${ids.tableWood})`} />
-            <ellipse cx="344" cy="952" rx="132" ry="20" fill="#8f4513" opacity="0.34" />
+            <ellipse ref={tableReflectionRef} cx="344" cy="952" rx="132" ry="20" fill="#8f4513" opacity="0.34" />
             <line x1="18" y1="906" x2="742" y2="882" stroke="#613c24" strokeWidth="2.5" opacity="0.68" />
 
-            <g filter={`url(#${ids.shadowBack})`}>
-              <path
-                d="M34,740 Q106,756 176,802 Q196,818 192,866 Q188,904 166,912 L40,910 Q14,832 34,740 Z"
-                fill="#1e1b18"
-              />
-              <path
-                d="M34,740 Q106,756 176,802 Q196,818 192,866 Q188,904 166,912 L40,910 Q14,832 34,740 Z"
-                fill={`url(#${ids.pinLeft})`}
-              />
-              <path d="M36,742 Q108,758 176,802 Q172,812 164,812 Q100,770 36,756 Z" fill="#5e4b3a" opacity="0.32" />
-              <path d="M164,798 Q186,810 198,828 L194,904 L168,908 Q178,854 164,798 Z" fill="#2e2a25" />
+            <g filter={`url(#${ids.shadowCrisp})`}>
+              <ellipse cx="628" cy="954" rx="114" ry="29" fill="#2d2621" stroke="#8f7e6f" strokeOpacity="0.58" strokeWidth="2" />
+              <ellipse cx="628" cy="942" rx="90" ry="17" fill="#171310" stroke="#bfa994" strokeOpacity="0.45" strokeWidth="1.5" />
+              <line x1="540" y1="944" x2="530" y2="968" stroke="#c7b29c" strokeOpacity="0.45" strokeWidth="2" />
+              <line x1="584" y1="956" x2="580" y2="978" stroke="#c7b29c" strokeOpacity="0.4" strokeWidth="2" />
+              <line x1="672" y1="956" x2="678" y2="978" stroke="#c7b29c" strokeOpacity="0.4" strokeWidth="2" />
+              <line x1="716" y1="944" x2="726" y2="966" stroke="#c7b29c" strokeOpacity="0.4" strokeWidth="2" />
+              <path d="M578,910 L734,922 Q744,932 732,942 L576,928 Z" fill="#3b2518" />
+              <path d="M578,910 L734,922 L734,928 L578,916 Z" fill="#6b452e" opacity="0.65" />
+              <polygon points="694,919 708,920 706,940 692,939" fill="#a67d3d" />
+              <ellipse cx="577" cy="919" rx="6" ry="9" fill="#59534f" />
+              <ellipse ref={emberHaloRef} cx="574" cy="919" rx="4.2" ry="6.8" fill="#ff6b1f" />
+              <circle ref={emberCoreRef} cx="574" cy="919" r="2.8" fill="#ffd269" />
             </g>
 
+            {/* Real-time advected laminar-to-turbulent paper smoke */}
+            <g filter={`url(#${ids.smokeBlur})`}>
+              <path
+                ref={smokeFilamentARef}
+                d="M574,908 Q560,844 580,788 Q604,732 574,678 Q548,632 582,580 Q610,536 578,494 Q620,532 608,586 Q596,638 618,684 Q636,734 598,796 Q576,846 584,904 Z"
+                fill={`url(#${ids.smokeA})`}
+              />
+              <path
+                ref={smokeFilamentBRef}
+                d="M582,882 Q610,828 584,772 Q554,718 594,666 Q638,616 592,562 Q646,592 630,652 Q616,704 584,762 Q614,820 584,884 Z"
+                fill={`url(#${ids.smokeB})`}
+              />
+              {Array.from({ length: 16 }, (_, idx) => (
+                <ellipse
+                  key={idx}
+                  ref={(el) => {
+                    smokePuffRefs.current[idx] = el;
+                  }}
+                  cx="574"
+                  cy="900"
+                  rx="8"
+                  ry="6"
+                  fill="#9ab8d9"
+                  opacity="0"
+                />
+              ))}
+            </g>
+          </g>
+        </svg>
+
+        {/* PLANE 6B (Closest Pop-Out: z = 104px): Animated Forearm, Hand & Crystal Whiskey Glass */}
+        <svg
+          viewBox="0 0 760 1000"
+          className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+          style={{ transform: 'translateZ(104px)' }}
+          aria-hidden="true"
+        >
+          {/* Dynamic Sleeve Forearm connecting shoulder/elbow seamlessly to lifting wrist */}
+          <g filter={`url(#${ids.shadowBack})`}>
+            <path
+              ref={armSleevePathRef}
+              d="M42.2,763.1 Q120.0,779.9 191.4,819.6 L167.5,904.3 Q88.1,900.6 14.0,877.7 Q9.7,812.1 42.2,763.1 Z"
+              fill="#1e1b18"
+            />
+            <path
+              ref={armSleeveStripeRef}
+              d="M42.2,763.1 Q120.0,779.9 191.4,819.6 L167.5,904.3 Q88.1,900.6 14.0,877.7 Q9.7,812.1 42.2,763.1 Z"
+              fill={`url(#${ids.pinLeft})`}
+            />
+            <path
+              ref={armRimPathRef}
+              d="M36,742 Q108,758 176,802 Q172,812 164,812 Q100,770 36,756 Z"
+              fill="#5e4b3a"
+              opacity="0.34"
+            />
+            <path
+              ref={cuffPathRef}
+              d="M176.0,815.3 L201.0,822.3 L177.1,907.0 L152.1,899.9 Z"
+              fill="#2e2a25"
+            />
+          </g>
+
+          {/* Animated Hand + Crystal Whiskey Glass lifting to lips */}
+          <g ref={handGlassGroupRef}>
             <g filter={`url(#${ids.shadowCrisp})`}>
-              <path d="M258,788 L430,788 L414,966 Q344,978 274,966 Z" fill="#2b1910" fillOpacity="0.56" stroke="#dfc7ad" strokeOpacity="0.58" strokeWidth="2" />
-              <path d="M268,864 Q344,874 420,864 L412,954 Q344,966 276,954 Z" fill={`url(#${ids.whiskey})`} />
-              <polygon points="300,872 344,882 328,926 286,910" fill="#ffd282" opacity="0.42" />
-              <polygon points="354,870 402,878 390,922 346,912" fill="#de7624" opacity="0.55" />
-              <polygon points="328,894 374,904 358,944 316,936" fill="#ff9e3d" opacity="0.34" />
+              {/* Glass wall */}
+              <path
+                d="M258,788 L430,788 L414,966 Q344,978 274,966 Z"
+                fill="#2b1910"
+                fillOpacity="0.56"
+                stroke="#dfc7ad"
+                strokeOpacity="0.58"
+                strokeWidth="2"
+              />
+
+              {/* Gravity-leveled amber bourbon clipped inside glass interior */}
+              <g clipPath={`url(#${ids.glassClip})`}>
+                <g ref={liquidGroupRef}>
+                  <path d="M210,866 L480,866 L470,1010 L220,1010 Z" fill={`url(#${ids.whiskey})`} />
+                  <polygon points="300,872 344,882 328,926 286,910" fill="#ffd282" opacity="0.44" />
+                  <polygon points="354,870 402,878 390,922 346,912" fill="#de7624" opacity="0.55" />
+                  <polygon points="328,894 374,904 358,944 316,936" fill="#ff9e3d" opacity="0.34" />
+                  <ellipse cx="344" cy="866" rx="115" ry="9" fill="#ffd68a" opacity="0.38" />
+                </g>
+              </g>
+
+              {/* Heavy crystal base & diamond-cut facets */}
               <path d="M276,950 Q344,962 412,950 L414,966 Q344,978 274,966 Z" fill="#d4bca2" fillOpacity="0.36" />
               <g stroke="#f7e2c8" strokeOpacity="0.65" strokeWidth="1.25" fill="none">
                 <polyline points="280,872 312,952 344,882 376,952 408,872" />
@@ -445,10 +867,12 @@ export function MobsterPaperScene({
                 <line x1="344" y1="806" x2="344" y2="868" strokeOpacity="0.25" />
                 <line x1="406" y1="800" x2="402" y2="864" strokeOpacity="0.5" />
               </g>
+
               <ellipse cx="344" cy="788" rx="86" ry="12.5" fill="none" stroke="#f5e3cc" strokeOpacity="0.86" strokeWidth="2.4" />
               <ellipse cx="344" cy="789.5" rx="84" ry="10.5" fill="none" stroke="#d1863a" strokeOpacity="0.45" strokeWidth="1.1" />
             </g>
 
+            {/* Sculpted Hand Gripping Glass */}
             <g filter={`url(#${ids.shadowCrisp})`}>
               <path d="M168,818 Q208,796 256,802 Q278,810 278,848 L272,934 Q224,946 168,910 Z" fill={`url(#${ids.handLight})`} />
               <path d="M178,824 Q216,808 254,816 L248,864 L182,876 Z" fill="#d1956c" opacity="0.48" filter={`url(#${ids.softShadow})`} />
@@ -462,37 +886,6 @@ export function MobsterPaperScene({
               <path d="M228,885 Q274,892 314,910 Q325,919 310,928 Q266,920 220,903 Z" fill="#8f593b" filter={`url(#${ids.shadowCrisp})`} />
               <ellipse cx="310" cy="918" rx="5.5" ry="3.3" transform="rotate(12 310 918)" fill="#b37855" opacity="0.35" />
               <path d="M214,912 Q252,920 284,935 Q292,943 278,949 Q242,941 206,926 Z" fill="#693f28" />
-            </g>
-
-            <g filter={`url(#${ids.shadowCrisp})`}>
-              <ellipse cx="628" cy="954" rx="114" ry="29" fill="#2d2621" stroke="#8f7e6f" strokeOpacity="0.58" strokeWidth="2" />
-              <ellipse cx="628" cy="942" rx="90" ry="17" fill="#171310" stroke="#bfa994" strokeOpacity="0.45" strokeWidth="1.5" />
-              <line x1="540" y1="944" x2="530" y2="968" stroke="#c7b29c" strokeOpacity="0.45" strokeWidth="2" />
-              <line x1="584" y1="956" x2="580" y2="978" stroke="#c7b29c" strokeOpacity="0.4" strokeWidth="2" />
-              <line x1="672" y1="956" x2="678" y2="978" stroke="#c7b29c" strokeOpacity="0.4" strokeWidth="2" />
-              <line x1="716" y1="944" x2="726" y2="966" stroke="#c7b29c" strokeOpacity="0.4" strokeWidth="2" />
-              <path d="M578,910 L734,922 Q744,932 732,942 L576,928 Z" fill="#3b2518" />
-              <path d="M578,910 L734,922 L734,928 L578,916 Z" fill="#6b452e" opacity="0.65" />
-              <polygon points="694,919 708,920 706,940 692,939" fill="#a67d3d" />
-              <ellipse cx="577" cy="919" rx="6" ry="9" fill="#59534f" />
-              <ellipse cx="574" cy="919" rx="3.5" ry="6" fill="#ff6b1f" />
-              <circle cx="574" cy="919" r="2.8" fill="#ffd269" />
-            </g>
-
-            <g filter={`url(#${ids.smokeBlur})`}>
-              <path
-                d="M575,906 Q558,844 580,788 Q604,732 574,678 Q548,632 582,580 Q610,536 578,494 Q620,532 608,586 Q596,638 618,684 Q636,734 598,796 Q576,846 584,904 Z"
-                fill={`url(#${ids.smokeA})`}
-              />
-              <path
-                d="M582,882 Q610,828 584,772 Q554,718 594,666 Q638,616 592,562 Q646,592 630,652 Q616,704 584,762 Q614,820 584,884 Z"
-                fill={`url(#${ids.smokeB})`}
-              />
-              <path
-                d="M598,642 Q560,602 592,554 Q626,512 648,546 Q622,554 606,586 Q592,616 610,642 Z"
-                fill="#a3bedb"
-                opacity="0.32"
-              />
             </g>
           </g>
 
