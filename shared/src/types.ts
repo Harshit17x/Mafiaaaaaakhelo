@@ -31,6 +31,35 @@ export type ChatChannel = 'PUBLIC' | 'MAFIA' | 'GHOST';
 
 export type VoiceChannel = 'PUBLIC' | 'MAFIA' | 'GHOST' | 'MUTED';
 
+export type AvatarPresetId =
+  | 'spiky-kid'
+  | 'bandana-kid'
+  | 'fighter-sense'
+  | 'suit-cat'
+  | 'cartoon-dad'
+  | 'sleepy-cat'
+  | 'ushanka-shiba'
+  | 'custom';
+
+export type AvatarFilter = 'color' | 'noir' | 'sepia' | 'vivid';
+
+export type AvatarPinColor = 'green' | 'white' | 'red' | 'teal' | 'gold';
+
+export type AvatarFrameTint = 'cream' | 'aged' | 'charcoal' | 'gold';
+
+export interface PlayerAvatarConfig {
+  presetId: AvatarPresetId;
+  filter: AvatarFilter;
+  pinColor: AvatarPinColor;
+  frameTint: AvatarFrameTint;
+  tilt: number;
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+  caption: string;
+  customDataUrl: string | null;
+}
+
 export interface RoomSettings {
   narratorMode: NarratorMode;
   mafiaCount: number;
@@ -66,6 +95,7 @@ export interface ServerPlayer {
   micEnabled: boolean;
   voiceJoined: boolean;
   joinedAt: number;
+  avatar?: PlayerAvatarConfig;
 }
 
 export interface InvestigationResult {
@@ -238,6 +268,7 @@ export interface ClientPlayerView {
   accuseTargetId: string | null;
   hasVoted: boolean;
   readyToVote: boolean;
+  avatar: PlayerAvatarConfig;
 }
 
 export interface ClientNightView {

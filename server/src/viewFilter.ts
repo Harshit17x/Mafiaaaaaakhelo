@@ -1,4 +1,4 @@
-import { validateSettings } from '@midnight-city/shared';
+import { sanitizeAvatarConfig, validateSettings } from '@midnight-city/shared';
 import type {
   ChatChannel,
   ChatMessage,
@@ -307,6 +307,7 @@ export function buildClientRoomView(
         room.game.phase === 'DAY_DISCUSSION'
           ? room.game.day.readyToVotePlayerIds.includes(p.id)
           : false,
+      avatar: sanitizeAvatarConfig(p.avatar, p.name),
     };
   });
 

@@ -4,10 +4,13 @@ import { BookOpen, LogOut, Radio, WifiOff } from 'lucide-react';
 import { soundEngine } from './audio/SoundEngine';
 import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
+import { AvatarPanelModal } from './components/AvatarPanelModal';
+import { AvatarPolaroidCard } from './components/AvatarPolaroidCard';
 import { GodViewPanel } from './components/GodViewPanel';
 import { HostControlsBar } from './components/HostControlsBar';
 import { LivePlayersBadge } from './components/LivePlayersBadge';
 import { MafiaTitleLogo } from './components/MafiaTitleLogo';
+import { MobsterPaperScene } from './components/MobsterPaperScene';
 import { RolePeekChip } from './components/RolePeekChip';
 import { RulesModal } from './components/RulesModal';
 import { VoiceControlsBar } from './components/VoiceControlsBar';
@@ -31,6 +34,8 @@ export function App() {
   const leaveRoom = useGameStore((s) => s.leaveRoom);
   const rulesOpen = useGameStore((s) => s.rulesOpen);
   const setRulesOpen = useGameStore((s) => s.setRulesOpen);
+  const myAvatar = useGameStore((s) => s.myAvatar);
+  const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
   const mutedAudio = useGameStore((s) => s.mutedAudio);
   const volume = useGameStore((s) => s.volume);
   const lastNarration = useGameStore((s) => s.lastNarration);
@@ -141,6 +146,24 @@ export function App() {
 
               <button
                 type="button"
+                onClick={() => setAvatarOpen(true)}
+                title="Customize Avatar"
+                className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg text-xs font-medium text-gold-200 hover:text-gold-100 bg-noir-900/75 hover:bg-noir-800 border border-gold-500/30 transition cursor-pointer"
+              >
+                <div className="w-6 h-7 overflow-hidden rounded-sm flex items-center justify-center">
+                  <AvatarPolaroidCard
+                    avatar={myAvatar}
+                    size="xs"
+                    showPin={false}
+                    tiltOverride={0}
+                    className="!w-6 !p-0.5 !pb-1"
+                  />
+                </div>
+                <span className="hidden sm:inline">Avatar</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setRulesOpen(true)}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
               >
@@ -184,19 +207,19 @@ export function App() {
       )}
 
       {isRestoringSession && !room ? (
-        <div className="relative z-10 min-h-screen flex items-center px-6 sm:px-12 md:px-16 lg:px-24 bg-[#060405] overflow-hidden">
-          <img
-            src="/assets/mafia-title-bg.jpg"
-            alt=""
+        <div className="relative z-10 min-h-screen flex items-center px-6 sm:px-12 md:px-16 lg:px-24 bg-[#050404] overflow-hidden">
+          <div
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 w-full h-full object-cover object-[74%_24%] md:object-[68%_center] opacity-30"
-          />
+            className="pointer-events-none fixed right-[-10vw] sm:right-[3vw] lg:right-[5vw] xl:right-[7vw] top-[8vh] sm:top-[6.5vh] h-[76vh] sm:h-[82vh] aspect-[760/1000] opacity-35"
+          >
+            <MobsterPaperScene className="w-full h-full" />
+          </div>
           <div
             aria-hidden="true"
             className="pointer-events-none fixed inset-0"
             style={{
               background:
-                'linear-gradient(90deg, rgba(6,4,6,0.94) 0%, rgba(7,5,6,0.8) 38%, rgba(6,4,6,0.5) 100%)',
+                'linear-gradient(90deg, rgba(5,4,4,0.95) 0%, rgba(5,4,4,0.82) 38%, rgba(5,4,4,0.5) 100%)',
             }}
           />
           <div className="relative z-10 max-w-[380px] space-y-6">
@@ -265,6 +288,7 @@ export function App() {
       )}
 
       <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+      <AvatarPanelModal />
     </div>
   );
 }

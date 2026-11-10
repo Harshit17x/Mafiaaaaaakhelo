@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Unlock,
 } from 'lucide-react';
+import { AvatarPolaroidCard } from '../components/AvatarPolaroidCard';
 import { ChatPanel } from '../components/ChatPanel';
 import { MidnightLoungeTable3D } from '../components/MidnightLoungeTable3D';
 import { useGameStore } from '../stores/useGameStore';
@@ -25,6 +26,8 @@ export function LobbyPage({
   const transferHost = useGameStore((s) => s.transferHost);
   const toggleLock = useGameStore((s) => s.toggleLock);
   const startGame = useGameStore((s) => s.startGame);
+  const myAvatar = useGameStore((s) => s.myAvatar);
+  const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
 
   const [copied, setCopied] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(true);
@@ -95,6 +98,21 @@ export function LobbyPage({
 
         <div className="flex flex-col items-end gap-1.5">
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setAvatarOpen(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gold-500/40 bg-noir-900/80 hover:bg-noir-800 text-xs font-semibold text-gold-200 transition cursor-pointer"
+            >
+              <AvatarPolaroidCard
+                avatar={me?.avatar ?? myAvatar}
+                size="xs"
+                showPin={false}
+                tiltOverride={-2}
+                className="!w-7 !p-0.5 !pb-1"
+              />
+              <span>Edit Avatar</span>
+            </button>
+
             {isHost && (
               <button
                 type="button"

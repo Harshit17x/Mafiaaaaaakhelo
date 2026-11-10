@@ -1,10 +1,22 @@
 import {
+  AVATAR_PRESETS,
+  MAX_AVATAR_CAPTION_LENGTH,
   MAX_CHAT_MESSAGE_LENGTH,
+  MAX_CUSTOM_AVATAR_DATA_URL_LENGTH,
   MAX_PLAYERS,
   MAX_PLAYER_NAME_LENGTH,
   MIN_PLAYERS,
 } from './constants.js';
-import type { RoleBreakdown, RoomSettings, SettingsValidationResult } from './types.js';
+import type {
+  AvatarFilter,
+  AvatarFrameTint,
+  AvatarPinColor,
+  AvatarPresetId,
+  PlayerAvatarConfig,
+  RoleBreakdown,
+  RoomSettings,
+  SettingsValidationResult,
+} from './types.js';
 
 export function getSuggestedMafiaCount(playingPlayerCount: number): number {
   if (playingPlayerCount <= 6) {
@@ -118,5 +130,111 @@ export function sanitizeChatMessage(raw: string): string {
 
 export function normalizeRoomCode(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+}
+
+const VALID_AVATAR_PRESET_IDS = new Set<AvatarPresetId>([
+  'spiky-kid',
+  'bandana-kid',
+  'fighter-sense',
+  'suit-cat',
+  'cartoon-dad',
+  'sleepy-cat',
+  'ushanka-shiba',
+  'custom',
+]);
+const VALID_AVATAR_FILTERS = new Set<AvatarFilter>(['color', 'noir', 'sepia', 'vivid']);
+const VALID_AVATAR_PINS = new Set<AvatarPinColor>(['green', 'white', 'red', 'teal', 'gold']);
+const VALID_AVATAR_TINTS = new Set<AvatarFrameTint>(['cream', 'aged', 'charcoal', 'gold']);
+const SAFE_DATA_URL_RE = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+
+function clampRounded(value: unknown, min: number, max: number, fallback: number, step = 10): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+  const clamped = Math.min(max, Math.max(min, value));
+  return Math.round(clamped * step) / step;
+}
+
+export function sanitizeAvatarCaption(raw: unknown): string {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  return raw
+    .replace(/[\u0000-\u001F\u007F<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_AVATAR_CAPTION_LENGTH);
+}
+
+export function createDefaultAvatarConfig(seed?: string): PlayerAvatarConfig {
+  let idx = 0;
+  if (seed && AVATAR_PRESETS.length > 0) {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+    }
+    idx = hash % AVATAR_PRESETS.length;
+  }
+  const preset = AVATAR_PRESETS[idx] ?? AVATAR_PRESETS[0]!;
+  return {
+    presetId: preset.id,
+    filter: preset.defaultFilter,
+    pinColor: preset.defaultPin,
+    frameTint: 'cream',
+    tilt: preset.defaultTilt,
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0,
+    caption: '',
+    customDataUrl: null,
+  };
+}
+
+export function sanitizeAvatarConfig(raw: unknown, seed?: string): PlayerAvatarConfig {
+  const defaults = createDefaultAvatarConfig(seed);
+  if (!raw || typeof raw !== 'object') {
+    return defaults;
+  }
+  const input = raw as Record<string, unknown>;
+
+  let presetId: AvatarPresetId = VALID_AVATAR_PRESET_IDS.has(input.presetId as AvatarPresetId)
+    ? (input.presetId as AvatarPresetId)
+    : defaults.presetId;
+
+  let customDataUrl: string | null = null;
+  if (
+    presetId === 'custom' &&
+    typeof input.customDataUrl === 'string' &&
+    input.customDataUrl.length <= MAX_CUSTOM_AVATAR_DATA_URL_LENGTH &&
+    SAFE_DATA_URL_RE.test(input.customDataUrl)
+  ) {
+    customDataUrl = input.customDataUrl;
+  } else if (presetId === 'custom') {
+    presetId = defaults.presetId;
+  }
+
+  const presetMeta = AVATAR_PRESETS.find((p) => p.id === presetId);
+  const filter = VALID_AVATAR_FILTERS.has(input.filter as AvatarFilter)
+    ? (input.filter as AvatarFilter)
+    : (presetMeta?.defaultFilter ?? defaults.filter);
+  const pinColor = VALID_AVATAR_PINS.has(input.pinColor as AvatarPinColor)
+    ? (input.pinColor as AvatarPinColor)
+    : (presetMeta?.defaultPin ?? defaults.pinColor);
+  const frameTint = VALID_AVATAR_TINTS.has(input.frameTint as AvatarFrameTint)
+    ? (input.frameTint as AvatarFrameTint)
+    : 'cream';
+
+  return {
+    presetId,
+    filter,
+    pinColor,
+    frameTint,
+    tilt: clampRounded(input.tilt, -6, 6, presetMeta?.defaultTilt ?? defaults.tilt, 10),
+    zoom: clampRounded(input.zoom, 1, 1.5, 1, 100),
+    offsetX: clampRounded(input.offsetX, -25, 25, 0, 1),
+    offsetY: clampRounded(input.offsetY, -25, 25, 0, 1),
+    caption: sanitizeAvatarCaption(input.caption),
+    customDataUrl,
+  };
 }
 

@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
 import { normalizeRoomCode } from '@midnight-city/shared';
 import {
   ArrowLeft,
   ArrowRight,
   KeyRound,
-  Layers,
   Plus,
   RotateCcw,
   Volume2,
@@ -14,6 +12,7 @@ import {
 } from 'lucide-react';
 import { soundEngine } from '../audio/SoundEngine';
 import { AudioControls } from '../components/AudioControls';
+import { AvatarPolaroidCard, resolveAvatarLabel } from '../components/AvatarPolaroidCard';
 import { LivePlayersBadge } from '../components/LivePlayersBadge';
 import { MafiaTitleLogo } from '../components/MafiaTitleLogo';
 import { MobsterPaperScene } from '../components/MobsterPaperScene';
@@ -23,7 +22,7 @@ import { useGameStore } from '../stores/useGameStore';
 type TitlePanel = 'menu' | 'create' | 'join' | 'credits';
 
 interface MenuItem {
-  id: 'create' | 'join' | 'rules' | 'credits';
+  id: 'create' | 'join' | 'avatars' | 'rules' | 'credits';
   label: string;
   description: string;
 }
@@ -40,6 +39,11 @@ const MENU_ITEMS: MenuItem[] = [
     id: 'join',
     label: 'Join Room',
     description: 'Slip into an existing Midnight City table using a 6-character invite code.',
+  },
+  {
+    id: 'avatars',
+    label: 'Avatars',
+    description: 'Pin your Polaroid dossier portrait and customize filters, frames, pushpins, or custom photos.',
   },
   {
     id: 'rules',
@@ -78,6 +82,9 @@ export function HomePage() {
   const joinRoom = useGameStore((s) => s.joinRoom);
   const rulesOpen = useGameStore((s) => s.rulesOpen);
   const setRulesOpen = useGameStore((s) => s.setRulesOpen);
+  const avatarOpen = useGameStore((s) => s.avatarOpen);
+  const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
+  const myAvatar = useGameStore((s) => s.myAvatar);
   const connectionStatus = useGameStore((s) => s.connectionStatus);
   const mutedAudio = useGameStore((s) => s.mutedAudio);
   const setMutedAudio = useGameStore((s) => s.setMutedAudio);
@@ -86,7 +93,6 @@ export function HomePage() {
 
   const [bootPhase, setBootPhase] = useState<'loading' | 'ready'>('loading');
   const [loadProgress, setLoadProgress] = useState(0);
-  const bgLoadedRef = useRef(false);
   const [introRunId, setIntroRunId] = useState(0);
 
   const [activePanel, setActivePanel] = useState<TitlePanel>(
@@ -100,7 +106,6 @@ export function HomePage() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
-  const [sceneMode, setSceneMode] = useState<'paper3d' | 'photo'>('paper3d');
   const aliasInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -109,31 +114,6 @@ export function HomePage() {
       setRoomCode(code);
       setActivePanel('join');
     }
-  }, []);
-
-  // Preload the cinematic speakeasy background artwork
-  useEffect(() => {
-    let active = true;
-    const img = new Image();
-    img.src = '/assets/mafia-title-bg.jpg';
-    if (img.complete) {
-      bgLoadedRef.current = true;
-    } else {
-      img.onload = () => {
-        if (active) bgLoadedRef.current = true;
-      };
-      img.onerror = () => {
-        if (active) bgLoadedRef.current = true;
-      };
-    }
-    const fallbackTimer = window.setTimeout(() => {
-      if (active) bgLoadedRef.current = true;
-    }, 2400);
-
-    return () => {
-      active = false;
-      window.clearTimeout(fallbackTimer);
-    };
   }, []);
 
   // Smooth AAA title loading progression
@@ -148,12 +128,10 @@ export function HomePage() {
       const elapsed = Math.max(0, Date.now() - startTime);
       const timeRatio = Math.min(1, elapsed / minDuration);
       const easedTime = 1 - Math.pow(1 - timeRatio, 2.3);
-      const ready = bgLoadedRef.current;
-      const targetCap = ready ? 100 : 88;
-      const pct = Math.min(targetCap, Math.round(easedTime * targetCap));
+      const pct = Math.min(100, Math.round(easedTime * 100));
       setLoadProgress(pct);
 
-      if (ready && timeRatio >= 1) {
+      if (timeRatio >= 1) {
         setLoadProgress(100);
         window.clearInterval(intervalId);
         doneTimer = window.setTimeout(() => {
@@ -200,13 +178,15 @@ export function HomePage() {
         setActivePanel('create');
       } else if (itemId === 'join') {
         setActivePanel('join');
+      } else if (itemId === 'avatars') {
+        setAvatarOpen(true);
       } else if (itemId === 'rules') {
         setRulesOpen(true);
       } else if (itemId === 'credits') {
         setActivePanel('credits');
       }
     },
-    [setRulesOpen]
+    [setRulesOpen, setAvatarOpen]
   );
 
   // Auto-focus alias input when opening Create or Join sub-screen
@@ -224,7 +204,7 @@ export function HomePage() {
   // Keyboard navigation matching AAA console/PC title screens
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (rulesOpen) return;
+      if (rulesOpen || avatarOpen) return;
 
       if (bootPhase === 'loading') {
         if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
@@ -272,10 +252,6 @@ export function HomePage() {
         } else if (e.key === 'r' || e.key === 'R') {
           e.preventDefault();
           replayIntro();
-        } else if (e.key === 'v' || e.key === 'V') {
-          e.preventDefault();
-          soundEngine.playMenuTick();
-          setSceneMode((m) => (m === 'paper3d' ? 'photo' : 'paper3d'));
         }
       }
     };
@@ -287,6 +263,7 @@ export function HomePage() {
     activePanel,
     selectedIndex,
     rulesOpen,
+    avatarOpen,
     mutedAudio,
     setMutedAudio,
     skipIntro,
@@ -334,6 +311,38 @@ export function HomePage() {
   };
 
   const activeMenuItem = MENU_ITEMS[selectedIndex] ?? DEFAULT_MENU_ITEM;
+  const avatarLabel = resolveAvatarLabel(myAvatar);
+  const avatarSelectorBar = (
+    <div className="flex items-center justify-between gap-3 rounded-sm bg-black/50 border border-cream-100/15 px-3 py-2">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <AvatarPolaroidCard
+          avatar={myAvatar}
+          size="xs"
+          showPin={false}
+          tiltOverride={-2}
+          className="!w-8 !p-0.5 !pb-1 shrink-0"
+        />
+        <div className="min-w-0">
+          <div className="text-[10px] font-condensed uppercase tracking-[0.18em] text-amber-300/85">
+            Selected Avatar
+          </div>
+          <div className="text-xs font-semibold text-cream-100 truncate">
+            {avatarLabel}
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          soundEngine.playMenuTick();
+          setAvatarOpen(true);
+        }}
+        className="shrink-0 px-2.5 py-1 rounded-sm border border-gold-400/45 bg-noir-900/80 hover:bg-noir-800 text-[11px] font-condensed uppercase tracking-wider text-gold-200 transition cursor-pointer"
+      >
+        Customize
+      </button>
+    </div>
+  );
   const loadingMessageIndex = Math.min(
     LOADING_MESSAGES.length - 1,
     Math.floor((loadProgress / 100) * LOADING_MESSAGES.length)
@@ -347,59 +356,35 @@ export function HomePage() {
       onClick={bootPhase === 'loading' ? skipIntro : undefined}
       className="relative z-10 min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#060405] text-cream-100 select-none flex flex-col justify-between"
     >
-      {/* Full-bleed speakeasy background scene: 3D Paper SVG diorama or Noir Photo */}
+      {/* Full-bleed speakeasy 3D Paper SVG Diorama scene */}
       <div
         className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
         aria-hidden="true"
       >
-        {sceneMode === 'photo' ? (
-          <motion.div
-            animate={{
-              opacity: bootPhase === 'loading' ? 0.18 + (loadProgress / 100) * 0.42 : 1,
-              scale: bootPhase === 'loading' ? 1.07 - (loadProgress / 100) * 0.03 : 1.035,
-              x: parallax.x,
-              y: parallax.y,
-            }}
-            transition={{
-              opacity: { duration: 0.7, ease: 'easeOut' },
-              scale: { duration: 1.4, ease: [0.22, 1, 0.36, 1] },
-              x: { type: 'spring', stiffness: 45, damping: 20 },
-              y: { type: 'spring', stiffness: 45, damping: 20 },
-            }}
-            className="w-full h-full will-change-transform"
-          >
-            <img
-              src="/assets/mafia-title-bg.jpg"
-              alt=""
-              className="w-full h-full object-cover object-[74%_24%] md:object-[68%_center]"
-            />
-          </motion.div>
-        ) : (
+        <div
+          className="relative w-full h-full transition-opacity duration-700"
+          style={{
+            opacity: bootPhase === 'loading' ? 0.28 + (loadProgress / 100) * 0.55 : 1,
+          }}
+        >
+          {/* Deep smoky speakeasy ambient backdrop behind the 3D paper shadowbox */}
           <div
-            className="relative w-full h-full transition-opacity duration-700"
+            className="absolute inset-0"
             style={{
-              opacity: bootPhase === 'loading' ? 0.28 + (loadProgress / 100) * 0.55 : 1,
+              background:
+                'radial-gradient(circle at 74% 46%, rgba(126, 68, 26, 0.44) 0%, rgba(36, 20, 12, 0.65) 42%, #050404 82%)',
             }}
-          >
-            {/* Deep smoky speakeasy ambient backdrop behind the 3D paper shadowbox */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(circle at 74% 46%, rgba(126, 68, 26, 0.44) 0%, rgba(36, 20, 12, 0.65) 42%, #050404 82%)',
-              }}
-            />
+          />
 
-            {/* 3D Pop-Out Paper-Cut SVG Diorama on the right half */}
-            <div className="absolute right-[-10vw] sm:right-[3vw] lg:right-[5vw] xl:right-[7vw] top-[8vh] sm:top-[6.5vh] h-[76vh] sm:h-[82vh] aspect-[760/1000] flex items-center justify-center opacity-50 md:opacity-100 transition-opacity">
-              <MobsterPaperScene
-                tiltX={parallax.y * 0.85}
-                tiltY={-parallax.x * 0.9}
-                className="w-full h-full"
-              />
-            </div>
+          {/* 3D Pop-Out Paper-Cut SVG Diorama on the right half */}
+          <div className="absolute right-[-10vw] sm:right-[3vw] lg:right-[5vw] xl:right-[7vw] top-[8vh] sm:top-[6.5vh] h-[76vh] sm:h-[82vh] aspect-[760/1000] flex items-center justify-center opacity-50 md:opacity-100 transition-opacity">
+            <MobsterPaperScene
+              tiltX={parallax.y * 0.85}
+              tiltY={-parallax.x * 0.9}
+              className="w-full h-full"
+            />
           </div>
-        )}
+        </div>
 
         {/* Warm ambient speakeasy light bloom */}
         <div
@@ -410,14 +395,12 @@ export function HomePage() {
           }}
         />
 
-        {/* Left-column legibility scrim (preserves the brooding figure on the right) */}
+        {/* Left-column legibility scrim */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              sceneMode === 'photo'
-                ? 'linear-gradient(90deg, rgba(6,4,6,0.92) 0%, rgba(7,5,6,0.78) 28%, rgba(8,6,7,0.34) 52%, rgba(6,4,6,0.12) 78%, rgba(6,4,6,0.42) 100%)'
-                : 'linear-gradient(90deg, rgba(5,4,4,0.94) 0%, rgba(5,4,4,0.78) 28%, rgba(5,4,4,0.16) 46%, transparent 64%)',
+              'linear-gradient(90deg, rgba(5,4,4,0.94) 0%, rgba(5,4,4,0.78) 28%, rgba(5,4,4,0.16) 46%, transparent 64%)',
           }}
         />
         <div
@@ -431,19 +414,13 @@ export function HomePage() {
           className="absolute inset-x-0 bottom-0 h-24"
           style={{
             background:
-              sceneMode === 'photo'
-                ? 'linear-gradient(180deg, transparent 0%, rgba(5,4,5,0.88) 100%)'
-                : 'linear-gradient(180deg, transparent 0%, rgba(5,4,5,0.58) 100%)',
+              'linear-gradient(180deg, transparent 0%, rgba(5,4,5,0.58) 100%)',
           }}
         />
 
         <TitleAtmosphereCanvas active />
         <div className="film-grain absolute inset-0 opacity-75" />
-        <div
-          className={`noir-vignette absolute inset-0 ${
-            sceneMode === 'paper3d' ? 'opacity-30' : 'opacity-100'
-          }`}
-        />
+        <div className="noir-vignette absolute inset-0 opacity-30" />
       </div>
 
       {/* Top bar: live player counter on the left, audio & status on the right */}
@@ -596,6 +573,8 @@ export function HomePage() {
                     />
                   </div>
 
+                  {avatarSelectorBar}
+
                   {localError && (
                     <p role="alert" className="text-xs text-crimson-400 font-medium">
                       {localError}
@@ -686,6 +665,8 @@ export function HomePage() {
                       className="w-full font-mono uppercase tracking-[0.35em] bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-sm px-3.5 py-2.5 text-sm text-amber-200 placeholder:text-cream-400/40 transition"
                     />
                   </div>
+
+                  {avatarSelectorBar}
 
                   {localError && (
                     <p role="alert" className="text-xs text-crimson-400 font-medium">
@@ -802,23 +783,6 @@ export function HomePage() {
         <div className="ml-auto flex flex-wrap items-center gap-3 sm:gap-5 font-condensed uppercase tracking-[0.1em] text-xs text-cream-100/80">
           {bootPhase === 'ready' && (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  soundEngine.playMenuTick();
-                  setSceneMode((m) => (m === 'paper3d' ? 'photo' : 'paper3d'));
-                }}
-                className="inline-flex items-center gap-1.5 text-cream-100/75 hover:text-amber-300 transition"
-              >
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
-                  V
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-amber-300" aria-hidden="true" />
-                  {sceneMode === 'paper3d' ? '3D Paper' : 'Noir Photo'}
-                </span>
-              </button>
-
               <button
                 type="button"
                 onClick={replayIntro}

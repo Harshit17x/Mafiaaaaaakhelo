@@ -4,6 +4,7 @@ import type {
   ClientRoomView,
   LiveServerStats,
   NightSubPhase,
+  PlayerAvatarConfig,
   RoomSettings,
   VoiceSignalPayload,
   VoiceState,
@@ -26,12 +27,21 @@ export interface JoinSuccessPayload {
 
 export interface ClientToServerEvents {
   'room:create': (
-    payload: { playerName: string },
+    payload: { playerName: string; avatar?: PlayerAvatarConfig },
     callback: (res: AckResponse<JoinSuccessPayload>) => void
   ) => void;
   'room:join': (
-    payload: { roomCode: string; playerName: string; sessionToken?: string },
+    payload: {
+      roomCode: string;
+      playerName: string;
+      sessionToken?: string;
+      avatar?: PlayerAvatarConfig;
+    },
     callback: (res: AckResponse<JoinSuccessPayload>) => void
+  ) => void;
+  'room:update_avatar': (
+    payload: { avatar: PlayerAvatarConfig },
+    callback: (res: AckResponse) => void
   ) => void;
   'room:reconnect': (
     payload: { roomCode: string; sessionToken: string },

@@ -141,7 +141,7 @@ export function registerSocketHandlers(
 
     socket.on('room:create', (payload, callback) => {
       if (!checkGeneralRate(callback)) return;
-      callback(manager.createRoom(socket.id, payload?.playerName ?? ''));
+      callback(manager.createRoom(socket.id, payload?.playerName ?? '', payload?.avatar));
     });
 
     socket.on('room:join', (payload, callback) => {
@@ -151,7 +151,8 @@ export function registerSocketHandlers(
           socket.id,
           payload?.roomCode ?? '',
           payload?.playerName ?? '',
-          payload?.sessionToken
+          payload?.sessionToken,
+          payload?.avatar
         )
       );
     });
@@ -174,6 +175,11 @@ export function registerSocketHandlers(
     socket.on('room:set_ready', (payload, callback) => {
       if (!checkGeneralRate(callback)) return;
       callback(manager.setReady(socket.id, Boolean(payload?.ready)));
+    });
+
+    socket.on('room:update_avatar', (payload, callback) => {
+      if (!checkGeneralRate(callback)) return;
+      callback(manager.updatePlayerAvatar(socket.id, payload?.avatar));
     });
 
     socket.on('room:update_settings', (payload, callback) => {

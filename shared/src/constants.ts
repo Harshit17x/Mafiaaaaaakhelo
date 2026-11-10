@@ -1,4 +1,9 @@
-import type { RoomSettings } from './types.js';
+import type {
+  AvatarFilter,
+  AvatarPinColor,
+  AvatarPresetId,
+  RoomSettings,
+} from './types.js';
 
 export const MIN_PLAYERS = 5;
 export const MAX_PLAYERS = 16;
@@ -41,4 +46,83 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
 };
 
 export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export const MAX_AVATAR_CAPTION_LENGTH = 16;
+export const MAX_CUSTOM_AVATAR_DATA_URL_LENGTH = 48_000;
+
+export interface AvatarPresetMeta {
+  id: Exclude<AvatarPresetId, 'custom'>;
+  name: string;
+  tagline: string;
+  imageUrl: string;
+  defaultPin: AvatarPinColor;
+  defaultTilt: number;
+  defaultFilter: AvatarFilter;
+}
+
+export const AVATAR_PRESETS: readonly AvatarPresetMeta[] = [
+  {
+    id: 'spiky-kid',
+    name: 'Spiky Hustler',
+    tagline: 'Streetwise optimist',
+    imageUrl: '/assets/avatars/spiky-kid.jpg',
+    defaultPin: 'green',
+    defaultTilt: -2.4,
+    defaultFilter: 'color',
+  },
+  {
+    id: 'bandana-kid',
+    name: 'Young Rebel',
+    tagline: 'Bold & fearless',
+    imageUrl: '/assets/avatars/bandana-kid.jpg',
+    defaultPin: 'white',
+    defaultTilt: 1.9,
+    defaultFilter: 'color',
+  },
+  {
+    id: 'fighter-sense',
+    name: 'The Enforcer',
+    tagline: 'Reads the room fast',
+    imageUrl: '/assets/avatars/fighter-sense.jpg',
+    defaultPin: 'white',
+    defaultTilt: -1.6,
+    defaultFilter: 'noir',
+  },
+  {
+    id: 'suit-cat',
+    name: 'Consigliere Cat',
+    tagline: 'Tailored & calculating',
+    imageUrl: '/assets/avatars/suit-cat.jpg',
+    defaultPin: 'red',
+    defaultTilt: 2.3,
+    defaultFilter: 'noir',
+  },
+  {
+    id: 'cartoon-dad',
+    name: 'Wise Guy',
+    tagline: 'Alibi always ready',
+    imageUrl: '/assets/avatars/cartoon-dad.jpg',
+    defaultPin: 'teal',
+    defaultTilt: -2.1,
+    defaultFilter: 'noir',
+  },
+  {
+    id: 'sleepy-cat',
+    name: 'Night Owl',
+    tagline: 'Quiet till dawn',
+    imageUrl: '/assets/avatars/sleepy-cat.jpg',
+    defaultPin: 'teal',
+    defaultTilt: 1.7,
+    defaultFilter: 'color',
+  },
+  {
+    id: 'ushanka-shiba',
+    name: 'Comrade Shiba',
+    tagline: 'Cold-blooded bluffer',
+    imageUrl: '/assets/avatars/ushanka-shiba.jpg',
+    defaultPin: 'gold',
+    defaultTilt: -1.8,
+    defaultFilter: 'color',
+  },
+];
 

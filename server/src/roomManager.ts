@@ -9,6 +9,7 @@ import {
   ROOM_INACTIVITY_TTL_MS,
   getSuggestedMafiaCount,
   normalizeRoomCode,
+  sanitizeAvatarConfig,
   sanitizeChatMessage,
   sanitizePlayerName,
 } from '@midnight-city/shared';
@@ -19,6 +20,7 @@ import type {
   ClientRoomView,
   JoinSuccessPayload,
   NightSubPhase,
+  PlayerAvatarConfig,
   RoomSettings,
   ServerPlayer,
   VoiceSignalPayload,
@@ -196,7 +198,11 @@ export class RoomManager {
     }
   }
 
-  createRoom(socketId: string, rawName: string): AckResponse<JoinSuccessPayload> {
+  createRoom(
+    socketId: string,
+    rawName: string,
+    rawAvatar?: PlayerAvatarConfig
+  ): AckResponse<JoinSuccessPayload> {
     const name = sanitizePlayerName(rawName);
     if (name.length < 1) {
       return { ok: false, error: 'Please enter a valid player name.' };
@@ -226,6 +232,7 @@ export class RoomManager {
       micEnabled: false,
       voiceJoined: false,
       joinedAt: currentNow,
+      avatar: sanitizeAvatarConfig(rawAvatar, name),
     };
 
     const room = createRoomRecord(roomCode, hostPlayer, currentNow);
@@ -241,7 +248,8 @@ export class RoomManager {
     socketId: string,
     rawCode: string,
     rawName: string,
-    sessionToken?: string
+    sessionToken?: string,
+    rawAvatar?: PlayerAvatarConfig
   ): AckResponse<JoinSuccessPayload> {
     const roomCode = normalizeRoomCode(rawCode);
     const room = this.repo.get(roomCode);
@@ -302,6 +310,7 @@ export class RoomManager {
       micEnabled: false,
       voiceJoined: false,
       joinedAt: currentNow,
+      avatar: sanitizeAvatarConfig(rawAvatar, name),
     };
 
     room.players = [...room.players, newPlayer];
@@ -509,6 +518,21 @@ export class RoomManager {
     }
     room.players = room.players.map((p) =>
       p.id === player.id ? { ...p, isReady: ready } : p
+    );
+    room.lastActivityAt = this.now();
+    this.broadcastRoom(room);
+    return { ok: true };
+  }
+
+  updatePlayerAvatar(socketId: string, rawAvatar: unknown): AckResponse {
+    const ctx = this.getMemberContext(socketId);
+    if (!ctx) {
+      return { ok: false, error: 'You are not in a room.' };
+    }
+    const { room, player } = ctx;
+    const sanitizedAvatar = sanitizeAvatarConfig(rawAvatar, player.name);
+    room.players = room.players.map((p) =>
+      p.id === player.id ? { ...p, avatar: sanitizedAvatar } : p
     );
     room.lastActivityAt = this.now();
     this.broadcastRoom(room);

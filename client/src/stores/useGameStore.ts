@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createDefaultAvatarConfig, sanitizeAvatarConfig } from '@midnight-city/shared';
 import type {
   AckResponse,
   ChatChannel,
@@ -6,6 +7,7 @@ import type {
   ClientRoomView,
   LiveServerStats,
   NightSubPhase,
+  PlayerAvatarConfig,
   RoomSettings,
   VoiceSignalPayload,
   VoiceState,
@@ -32,6 +34,8 @@ interface GameStoreState {
   kickedReason: string | null;
   lastNarration: { key: string; text: string; seq: number } | null;
   rulesOpen: boolean;
+  avatarOpen: boolean;
+  myAvatar: PlayerAvatarConfig;
   mutedAudio: boolean;
   volume: number;
   voiceSignalListeners: Set<(fromPlayerId: string, signal: VoiceSignalPayload) => void>;
@@ -39,6 +43,8 @@ interface GameStoreState {
   initConnection: () => void;
   clearError: () => void;
   setRulesOpen: (open: boolean) => void;
+  setAvatarOpen: (open: boolean) => void;
+  updateAvatar: (avatar: PlayerAvatarConfig) => Promise<boolean>;
   setMutedAudio: (muted: boolean) => void;
   setVolume: (volume: number) => void;
   registerVoiceSignalListener: (
@@ -99,7 +105,28 @@ function saveAudioPrefs(muted: boolean, volume: number): void {
   }
 }
 
+const AVATAR_STORAGE_KEY = 'midnight_city_avatar_v1';
+
+function loadAvatarPrefs(): PlayerAvatarConfig {
+  try {
+    const raw = localStorage.getItem(AVATAR_STORAGE_KEY);
+    if (raw) {
+      return sanitizeAvatarConfig(JSON.parse(raw));
+    }
+  } catch {
+  }
+  return createDefaultAvatarConfig();
+}
+
+function saveAvatarPrefs(avatar: PlayerAvatarConfig): void {
+  try {
+    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(avatar));
+  } catch {
+  }
+}
+
 const initialAudio = loadAudioPrefs();
+const initialAvatar = loadAvatarPrefs();
 
 export const useGameStore = create<GameStoreState>((set, get) => {
   async function invokeAck<T = undefined>(
@@ -133,6 +160,8 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     kickedReason: null,
     lastNarration: null,
     rulesOpen: false,
+    avatarOpen: false,
+    myAvatar: initialAvatar,
     mutedAudio: initialAudio.muted,
     volume: initialAudio.volume,
     voiceSignalListeners: new Set(),
@@ -240,6 +269,24 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       set({ rulesOpen: open });
     },
 
+    setAvatarOpen(open) {
+      set({ avatarOpen: open });
+    },
+
+    async updateAvatar(rawAvatar) {
+      const clean = sanitizeAvatarConfig(rawAvatar);
+      saveAvatarPrefs(clean);
+      set({ myAvatar: clean });
+      const { room, socket } = get();
+      if (room && socket && socket.connected) {
+        const res = await invokeAck((sock, done) =>
+          sock.emit('room:update_avatar', { avatar: clean }, done)
+        );
+        return res.ok;
+      }
+      return true;
+    },
+
     setMutedAudio(muted) {
       saveAudioPrefs(muted, get().volume);
       set({ mutedAudio: muted });
@@ -266,11 +313,12 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     },
 
     async createRoom(playerName) {
+      const avatar = get().myAvatar;
       const res = await invokeAck<{
         roomCode: string;
         playerId: string;
         sessionToken: string;
-      }>((sock, done) => sock.emit('room:create', { playerName }, done));
+      }>((sock, done) => sock.emit('room:create', { playerName, avatar }, done));
       if (res.ok) {
         saveStoredSession({
           roomCode: res.roomCode,
@@ -289,12 +337,13 @@ export const useGameStore = create<GameStoreState>((set, get) => {
         stored && stored.roomCode === roomCode.trim().toUpperCase()
           ? stored.sessionToken
           : undefined;
+      const avatar = get().myAvatar;
       const res = await invokeAck<{
         roomCode: string;
         playerId: string;
         sessionToken: string;
       }>((sock, done) =>
-        sock.emit('room:join', { roomCode, playerName, sessionToken }, done)
+        sock.emit('room:join', { roomCode, playerName, sessionToken, avatar }, done)
       );
       if (res.ok) {
         saveStoredSession({

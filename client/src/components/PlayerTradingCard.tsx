@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { ROLE_META, RoleSvgIcon } from './RoleIcons';
+import { AvatarPolaroidCard } from './AvatarPolaroidCard';
 
 export interface PlayerTradingCardProps {
   player: ClientPlayerView | null;
@@ -161,41 +162,39 @@ export function PlayerTradingCard({
           </div>
         </div>
 
-        <div className="relative z-10 my-1.5 flex items-center justify-center h-14">
-          {revealedRole ? (
-            <div className="flex flex-col items-center">
-              <RoleSvgIcon
-                role={revealedRole}
-                className={`w-11 h-11 ${roleMeta?.colorClass ?? 'text-gold-200'}`}
-              />
-              <span
-                className={`text-[9px] font-display font-bold uppercase tracking-wider ${
-                  roleMeta?.colorClass ?? 'text-gold-200'
-                }`}
+        <div className="relative z-10 my-1.5 flex items-center justify-center h-[68px]">
+          <div className={`relative flex items-center justify-center ${isDead ? 'opacity-65 grayscale' : ''}`}>
+            <AvatarPolaroidCard
+              avatar={player.avatar}
+              size="sm"
+              showPin={false}
+              tiltOverride={isDead ? -4 : -1.5}
+              className="!w-[54px] !p-1 !pb-1.5 shadow-[0_6px_14px_rgba(0,0,0,0.65)]"
+            />
+            {revealedRole && (
+              <div
+                title={roleMeta?.label}
+                className="absolute -bottom-1.5 -right-2.5 z-20 flex items-center gap-0.5 rounded-full bg-noir-950/95 border border-gold-400/60 px-1.5 py-0.5 shadow-lg"
               >
-                {roleMeta?.label}
-              </span>
-            </div>
-          ) : isDead ? (
-            <Skull className="w-10 h-10 text-crimson-400/80" />
-          ) : (
-            <svg viewBox="0 0 64 64" className="w-12 h-12 text-noir-950 drop-shadow-[0_2px_6px_rgba(232,198,122,0.35)]" aria-hidden="true">
-              <path
-                d="M17 22H47L42 12C40 10 36 10 32 12C28 10 24 10 22 12L17 22Z"
-                fill="#111622"
-                stroke="#d4a84f"
-                strokeWidth="1.5"
-              />
-              <path d="M12 22H52" stroke="#e8c67a" strokeWidth="2.2" strokeLinecap="round" />
-              <circle cx="32" cy="31" r="9" fill="#090d16" stroke="#d4a84f" strokeWidth="1.4" />
-              <path
-                d="M16 56C18 45 24 41 32 41C40 41 46 45 48 56H16Z"
-                fill="#0b101d"
-                stroke="#d4a84f"
-                strokeWidth="1.5"
-              />
-            </svg>
-          )}
+                <RoleSvgIcon
+                  role={revealedRole}
+                  className={`w-4 h-4 ${roleMeta?.colorClass ?? 'text-gold-200'}`}
+                />
+                <span
+                  className={`text-[8px] font-display font-bold uppercase tracking-wider ${
+                    roleMeta?.colorClass ?? 'text-gold-200'
+                  }`}
+                >
+                  {roleMeta?.label}
+                </span>
+              </div>
+            )}
+            {!revealedRole && isDead && (
+              <div className="absolute -bottom-1 -right-2 z-20 rounded-full bg-noir-950/95 border border-crimson-500/60 p-1 shadow-lg">
+                <Skull className="w-4 h-4 text-crimson-400" />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="relative z-10 border-y border-gold-400/40 bg-noir-950/75 px-1.5 py-1 text-center">
