@@ -13,7 +13,11 @@ import { SocketRateLimiter } from './rateLimiter.js';
 import { RoomManager } from './roomManager.js';
 import { InMemoryRoomRepository } from './roomStore.js';
 import type { RoomRepository } from './roomStore.js';
-import { createSocketIoEmitter, registerSocketHandlers } from './socketHandlers.js';
+import {
+  createSocketIoEmitter,
+  createStatsBroadcaster,
+  registerSocketHandlers,
+} from './socketHandlers.js';
 
 export interface CreateServerOptions {
   clientOrigin?: string | string[];
@@ -87,7 +91,15 @@ export function createMidnightCityServer(
     },
   });
 
-  const emitter = createSocketIoEmitter(io);
+  const statsBroadcaster = createStatsBroadcaster(io, repository);
+
+  app.get('/api/stats', (_req, res) => {
+    res.json(statsBroadcaster.getStats());
+  });
+
+  const emitter = createSocketIoEmitter(io, () => {
+    statsBroadcaster.broadcastIfChanged();
+  });
   const manager = new RoomManager({
     repository,
     emitter,
@@ -97,11 +109,12 @@ export function createMidnightCityServer(
   });
 
   const rateLimiter = new SocketRateLimiter();
-  registerSocketHandlers(io, manager, rateLimiter);
+  registerSocketHandlers(io, manager, rateLimiter, statsBroadcaster);
 
   const tickIntervalMs = options.tickIntervalMs ?? 250;
   const interval = setInterval(() => {
     manager.tick();
+    statsBroadcaster.broadcastIfChanged();
   }, tickIntervalMs);
 
   return {

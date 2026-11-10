@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { soundEngine } from '../audio/SoundEngine';
 import { AudioControls } from '../components/AudioControls';
+import { LivePlayersBadge } from '../components/LivePlayersBadge';
 import { MafiaTitleLogo } from '../components/MafiaTitleLogo';
 import { TitleAtmosphereCanvas } from '../components/TitleAtmosphereCanvas';
 import { useGameStore } from '../stores/useGameStore';
@@ -403,8 +404,10 @@ export function HomePage() {
         <div className="noir-vignette absolute inset-0" />
       </div>
 
-      {/* Minimal floating top-right audio & connection status HUD */}
-      <div className="relative z-20 flex items-center justify-end px-5 sm:px-10 pt-5">
+      {/* Top bar: live player counter on the left, audio & status on the right */}
+      <div className="relative z-20 flex items-center justify-between gap-3 px-5 sm:px-10 pt-5">
+        <LivePlayersBadge variant="title" />
+
         <div className="inline-flex items-center gap-3 rounded-full bg-black/45 backdrop-blur-md border border-cream-100/15 px-3.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
           {connectionStatus === 'connected' ? (
             <span className="inline-flex items-center gap-1.5 font-condensed uppercase tracking-[0.14em] text-[11px] text-cream-100/80">

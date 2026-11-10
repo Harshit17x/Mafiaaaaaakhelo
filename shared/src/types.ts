@@ -335,3 +335,10 @@ export interface IceServerConfig {
   credential?: string;
 }
 
+export interface LiveServerStats {
+  playersInRooms: number;
+  playersInGame: number;
+  activeRooms: number;
+  onlineCount: number;
+}
+

@@ -1,16 +1,84 @@
 import type {
   AckResponse,
   ClientToServerEvents,
+  LiveServerStats,
   ServerToClientEvents,
 } from '@midnight-city/shared';
 import type { Server, Socket } from 'socket.io';
 import { SocketRateLimiter } from './rateLimiter.js';
 import type { RoomEmitter, RoomManager } from './roomManager.js';
+import type { RoomRepository } from './roomStore.js';
 
 export type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
-export function createSocketIoEmitter(io: GameIoServer): RoomEmitter {
+export function computeLiveServerStats(
+  repository: RoomRepository,
+  onlineCount: number
+): LiveServerStats {
+  const rooms = repository.list();
+  let playersInRooms = 0;
+  let playersInGame = 0;
+  let activeRooms = 0;
+
+  for (const room of rooms) {
+    const connected = room.players.filter((p) => p.connected);
+    if (connected.length > 0) {
+      activeRooms += 1;
+    }
+    playersInRooms += connected.length;
+    if (room.game.phase !== 'LOBBY' && room.game.phase !== 'GAME_OVER') {
+      playersInGame += connected.filter((p) => p.isPlaying).length;
+    }
+  }
+
+  return {
+    playersInRooms,
+    playersInGame,
+    activeRooms,
+    onlineCount,
+  };
+}
+
+export interface StatsBroadcaster {
+  getStats: () => LiveServerStats;
+  sendToSocket: (socket: GameSocket) => void;
+  broadcastIfChanged: () => void;
+}
+
+export function createStatsBroadcaster(
+  io: GameIoServer,
+  repository: RoomRepository
+): StatsBroadcaster {
+  let lastKey = '';
+
+  const getStats = (): LiveServerStats =>
+    computeLiveServerStats(repository, io.sockets.sockets.size);
+
+  const serialize = (stats: LiveServerStats) =>
+    `${stats.playersInRooms}|${stats.playersInGame}|${stats.activeRooms}|${stats.onlineCount}`;
+
+  return {
+    getStats,
+    sendToSocket(socket) {
+      socket.emit('server:stats', getStats());
+    },
+    broadcastIfChanged() {
+      const stats = getStats();
+      const key = serialize(stats);
+      if (key === lastKey) {
+        return;
+      }
+      lastKey = key;
+      io.emit('server:stats', stats);
+    },
+  };
+}
+
+export function createSocketIoEmitter(
+  io: GameIoServer,
+  onStatsChanged?: () => void
+): RoomEmitter {
   return {
     emitRoomState(socketId, state) {
       io.to(socketId).emit('room:state', state);
@@ -45,15 +113,20 @@ export function createSocketIoEmitter(io: GameIoServer): RoomEmitter {
         void sock.leave(roomCode);
       }
     },
+    onStatsChanged,
   };
 }
 
 export function registerSocketHandlers(
   io: GameIoServer,
   manager: RoomManager,
-  rateLimiter: SocketRateLimiter
+  rateLimiter: SocketRateLimiter,
+  statsBroadcaster?: StatsBroadcaster
 ): void {
   io.on('connection', (socket: GameSocket) => {
+    statsBroadcaster?.sendToSocket(socket);
+    statsBroadcaster?.broadcastIfChanged();
+
     const checkGeneralRate = (
       callback?: (res: AckResponse<never>) => void
     ): boolean => {
@@ -251,6 +324,7 @@ export function registerSocketHandlers(
       rateLimiter.clearPrefix(`chat:${socket.id}`);
       rateLimiter.clearPrefix(`sig:${socket.id}`);
       manager.handleDisconnect(socket.id);
+      statsBroadcaster?.broadcastIfChanged();
     });
   });
 }

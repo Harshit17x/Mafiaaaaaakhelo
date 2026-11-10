@@ -4,6 +4,7 @@ import type {
   ChatChannel,
   ChatMessage,
   ClientRoomView,
+  LiveServerStats,
   NightSubPhase,
   RoomSettings,
   VoiceSignalPayload,
@@ -23,6 +24,7 @@ interface GameStoreState {
   socket: TypedGameSocket | null;
   connectionStatus: ConnectionStatus;
   isRestoringSession: boolean;
+  liveStats: LiveServerStats | null;
   room: ClientRoomView | null;
   voiceState: VoiceState | null;
   chatMessages: ChatMessage[];
@@ -123,6 +125,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     socket: null,
     connectionStatus: 'connecting',
     isRestoringSession: Boolean(loadStoredSession()),
+    liveStats: null,
     room: null,
     voiceState: null,
     chatMessages: [],
@@ -163,7 +166,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       });
 
       socket.on('disconnect', () => {
-        set({ connectionStatus: 'reconnecting' });
+        set({ connectionStatus: 'reconnecting', liveStats: null });
       });
 
       socket.io.on('reconnect_attempt', () => {
@@ -171,7 +174,11 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       });
 
       socket.io.on('reconnect_failed', () => {
-        set({ connectionStatus: 'disconnected' });
+        set({ connectionStatus: 'disconnected', liveStats: null });
+      });
+
+      socket.on('server:stats', (liveStats) => {
+        set({ liveStats });
       });
 
       socket.on('room:state', (room) => {

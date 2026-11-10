@@ -6,6 +6,7 @@ import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
 import { GodViewPanel } from './components/GodViewPanel';
 import { HostControlsBar } from './components/HostControlsBar';
+import { LivePlayersBadge } from './components/LivePlayersBadge';
 import { MafiaTitleLogo } from './components/MafiaTitleLogo';
 import { RolePeekChip } from './components/RolePeekChip';
 import { RulesModal } from './components/RulesModal';
@@ -114,13 +115,14 @@ export function App() {
       {room && (
         <header className="relative z-20 border-b border-gold-500/20 bg-noir-950/75 backdrop-blur-md">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="font-display font-bold tracking-[0.2em] text-gold-200 text-sm sm:text-base">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <span className="font-display font-bold tracking-[0.2em] text-gold-200 text-sm sm:text-base truncate">
                 MIDNIGHT CITY
               </span>
               <span className="hidden sm:inline-block font-mono text-xs px-2 py-0.5 rounded bg-noir-800 border border-gold-500/30 text-gold-300">
                 #{room.roomCode}
               </span>
+              <LivePlayersBadge variant="header" />
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">

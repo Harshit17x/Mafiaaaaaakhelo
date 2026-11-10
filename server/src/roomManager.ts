@@ -68,6 +68,7 @@ export interface RoomEmitter {
   ): void;
   joinSocketRoom(socketId: string, roomCode: string): void;
   leaveSocketRoom(socketId: string, roomCode: string): void;
+  onStatsChanged?: () => void;
 }
 
 export interface RoomManagerOptions {
@@ -179,6 +180,7 @@ export class RoomManager {
         }
       }
     }
+    this.emitter.onStatsChanged?.();
   }
 
   private syncMafiaSuggestedCountIfUnset(room: ServerRoom): void {
@@ -431,6 +433,7 @@ export class RoomManager {
       if (room.players.length === 0) {
         this.repo.delete(room.roomCode);
         this.pausedAtByRoom.delete(room.roomCode);
+        this.emitter.onStatsChanged?.();
         return { ok: true };
       }
 
@@ -1377,10 +1380,12 @@ export class RoomManager {
 
   tick(nowOverride?: number): void {
     const currentNow = nowOverride ?? this.now();
+    let deletedAnyRoom = false;
     for (const room of this.repo.list()) {
       if (currentNow - room.lastActivityAt >= this.roomInactivityTtlMs) {
         this.repo.delete(room.roomCode);
         this.pausedAtByRoom.delete(room.roomCode);
+        deletedAnyRoom = true;
         continue;
       }
 
@@ -1535,6 +1540,9 @@ export class RoomManager {
         room.lastActivityAt = currentNow;
         this.broadcastRoom(room, events);
       }
+    }
+    if (deletedAnyRoom) {
+      this.emitter.onStatsChanged?.();
     }
   }
 }

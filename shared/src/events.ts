@@ -2,6 +2,7 @@ import type {
   ChatChannel,
   ChatMessage,
   ClientRoomView,
+  LiveServerStats,
   NightSubPhase,
   RoomSettings,
   VoiceSignalPayload,
@@ -126,4 +127,5 @@ export interface ServerToClientEvents {
   'voice:state': (state: VoiceState) => void;
   'voice:signal': (payload: { fromPlayerId: string; signal: VoiceSignalPayload }) => void;
   'narration:cue': (payload: { key: string; text: string }) => void;
+  'server:stats': (stats: LiveServerStats) => void;
 }

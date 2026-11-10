@@ -164,3 +164,17 @@
   animation: titlePanelIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes liveCountTick {
+  0% {
+    transform: translateY(-2px) scale(1.12);
+    color: #f5dfb0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-live-tick {
+  animation: liveCountTick 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
