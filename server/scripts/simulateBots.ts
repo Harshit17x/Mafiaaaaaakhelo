@@ -39,12 +39,16 @@ function pickRandom<T>(arr: readonly T[]): T {
 
 async function runSimulation() {
   const externalUrl = process.env.SERVER_URL?.trim();
-  const botCount = Math.max(5, Number(process.env.BOT_COUNT ?? 6));
+  const targetRoomCode = process.env.ROOM_CODE?.trim().toUpperCase();
+  const botCount = Math.max(
+    targetRoomCode ? 1 : 5,
+    Number(process.env.BOT_COUNT ?? (targetRoomCode ? 5 : 6))
+  );
 
   let embeddedServer: ReturnType<typeof createMidnightCityServer> | null = null;
-  let serverUrl = externalUrl ?? '';
+  let serverUrl = externalUrl ?? (targetRoomCode ? 'http://localhost:3001' : '');
 
-  if (!externalUrl) {
+  if (!serverUrl) {
     embeddedServer = createMidnightCityServer({
       tickIntervalMs: 40,
       timings: {
@@ -89,50 +93,69 @@ async function runSimulation() {
   }
 
   const hostBot = bots[0]!;
-  const createRes = await emitAck<JoinSuccessPayload>(hostBot.socket, 'room:create', {
-    playerName: hostBot.name,
-  });
-  if (!createRes.ok) {
-    throw new Error(`Create failed: ${createRes.error}`);
-  }
-  const roomCode = createRes.roomCode;
-  console.log(`Room created: ${roomCode}`);
+  let roomCode = targetRoomCode ?? '';
 
-  for (let i = 1; i < bots.length; i += 1) {
-    const joinRes = await emitAck<JoinSuccessPayload>(bots[i]!.socket, 'room:join', {
-      roomCode,
-      playerName: bots[i]!.name,
-    });
-    if (!joinRes.ok) {
-      throw new Error(`Join failed for ${bots[i]!.name}: ${joinRes.error}`);
+  if (targetRoomCode) {
+    for (const bot of bots) {
+      const joinRes = await emitAck<JoinSuccessPayload>(bot.socket, 'room:join', {
+        roomCode,
+        playerName: bot.name,
+      });
+      if (!joinRes.ok) {
+        throw new Error(`Join failed for ${bot.name}: ${joinRes.error}`);
+      }
     }
-  }
+    console.log(`Bots joined room ${roomCode} and marked Ready. Waiting for Host to start...`);
+    for (const bot of bots) {
+      const r = await emitAck(bot.socket, 'room:set_ready', { ready: true });
+      if (!r.ok) throw new Error(r.error);
+    }
+  } else {
+    const createRes = await emitAck<JoinSuccessPayload>(hostBot.socket, 'room:create', {
+      playerName: hostBot.name,
+    });
+    if (!createRes.ok) {
+      throw new Error(`Create failed: ${createRes.error}`);
+    }
+    roomCode = createRes.roomCode;
+    console.log(`Room created: ${roomCode}`);
 
-  await emitAck(hostBot.socket, 'room:update_settings', {
-    settings: {
-      narratorMode: 'AUTO_NARRATOR',
-      healerEnabled: true,
-      detectiveEnabled: true,
-      jokerEnabled: botCount >= 6,
-      discussionTimeSec: 15,
-      votingTimeSec: 15,
-      nightActionTimeSec: 15,
-    },
-  });
+    for (let i = 1; i < bots.length; i += 1) {
+      const joinRes = await emitAck<JoinSuccessPayload>(bots[i]!.socket, 'room:join', {
+        roomCode,
+        playerName: bots[i]!.name,
+      });
+      if (!joinRes.ok) {
+        throw new Error(`Join failed for ${bots[i]!.name}: ${joinRes.error}`);
+      }
+    }
 
-  for (const bot of bots) {
-    const r = await emitAck(bot.socket, 'room:set_ready', { ready: true });
-    if (!r.ok) throw new Error(r.error);
-  }
+    await emitAck(hostBot.socket, 'room:update_settings', {
+      settings: {
+        narratorMode: 'AUTO_NARRATOR',
+        healerEnabled: true,
+        detectiveEnabled: true,
+        jokerEnabled: botCount >= 6,
+        discussionTimeSec: 15,
+        votingTimeSec: 15,
+        nightActionTimeSec: 15,
+      },
+    });
 
-  const startRes = await emitAck(hostBot.socket, 'game:start');
-  if (!startRes.ok) {
-    throw new Error(`Start failed: ${startRes.error}`);
+    for (const bot of bots) {
+      const r = await emitAck(bot.socket, 'room:set_ready', { ready: true });
+      if (!r.ok) throw new Error(r.error);
+    }
+
+    const startRes = await emitAck(hostBot.socket, 'game:start');
+    if (!startRes.ok) {
+      throw new Error(`Start failed: ${startRes.error}`);
+    }
+    console.log('Game started. Playing rounds until GAME_OVER...');
   }
-  console.log('Game started. Playing rounds until GAME_OVER...');
 
   let lastLoggedPhase = '';
-  const deadline = Date.now() + 30_000;
+  const deadline = Date.now() + (targetRoomCode ? 15 * 60_000 : 30_000);
 
   while (Date.now() < deadline) {
     const hostState = hostBot.state;

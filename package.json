@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "workspaces": [
     "shared",
     "server",
@@ -10,8 +13,8 @@
   ],
   "scripts": {
     "build:shared": "npm run build --workspace=@midnight-city/shared",
-    "build:server": "npm run build --workspace=@midnight-city/server",
-    "build:client": "npm run build --workspace=@midnight-city/client",
+    "build:server": "npm run build:server --workspace=@midnight-city/server",
+    "build:client": "npm run build:client --workspace=@midnight-city/client",
     "build": "npm run build:shared && npm run build:server && npm run build:client",
     "dev": "npm run build:shared && concurrently -k -n SHARED,SERVER,CLIENT -c yellow,cyan,magenta \"npm run dev --workspace=@midnight-city/shared\" \"npm run dev --workspace=@midnight-city/server\" \"npm run dev --workspace=@midnight-city/client\"",
     "test": "npm run build:shared && npm test --workspace=@midnight-city/server"

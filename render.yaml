@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: midnight-city-mafia-server
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:shared && npm run build:server
+    startCommand: npm run start --workspace=@midnight-city/server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        value: "*"
+      - key: STUN_URLS
+        value: stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
+      - key: TURN_URL
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false

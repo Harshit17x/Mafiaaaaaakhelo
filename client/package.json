@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:shared": "tsc -p ../shared/tsconfig.json",
+    "build:client": "tsc -b && vite build",
+    "build": "tsc -p ../shared/tsconfig.json && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
