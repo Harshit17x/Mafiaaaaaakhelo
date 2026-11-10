@@ -6,6 +6,7 @@ import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
 import { GodViewPanel } from './components/GodViewPanel';
 import { HostControlsBar } from './components/HostControlsBar';
+import { MafiaTitleLogo } from './components/MafiaTitleLogo';
 import { RolePeekChip } from './components/RolePeekChip';
 import { RulesModal } from './components/RulesModal';
 import { VoiceControlsBar } from './components/VoiceControlsBar';
@@ -108,45 +109,43 @@ export function App() {
 
   return (
     <div className="relative min-h-screen flex flex-col">
-      <Atmosphere phase={phase} />
+      {room && <Atmosphere phase={phase} />}
 
-      <header className="relative z-20 border-b border-gold-500/20 bg-noir-950/75 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="font-display font-bold tracking-[0.2em] text-gold-200 text-sm sm:text-base">
-              MIDNIGHT CITY
-            </span>
-            {room && (
+      {room && (
+        <header className="relative z-20 border-b border-gold-500/20 bg-noir-950/75 backdrop-blur-md">
+          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="font-display font-bold tracking-[0.2em] text-gold-200 text-sm sm:text-base">
+                MIDNIGHT CITY
+              </span>
               <span className="hidden sm:inline-block font-mono text-xs px-2 py-0.5 rounded bg-noir-800 border border-gold-500/30 text-gold-300">
                 #{room.roomCode}
               </span>
-            )}
-          </div>
+            </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {connectionStatus !== 'connected' && (
-              <span
-                role="status"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs"
+            <div className="flex items-center gap-2 sm:gap-3">
+              {connectionStatus !== 'connected' && (
+                <span
+                  role="status"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs"
+                >
+                  <WifiOff className="w-3.5 h-3.5 animate-pulse" />
+                  {connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+                </span>
+              )}
+
+              <RolePeekChip />
+              <AudioControls />
+
+              <button
+                type="button"
+                onClick={() => setRulesOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
               >
-                <WifiOff className="w-3.5 h-3.5 animate-pulse" />
-                {connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
-              </span>
-            )}
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Rules</span>
+              </button>
 
-            <RolePeekChip />
-            <AudioControls />
-
-            <button
-              type="button"
-              onClick={() => setRulesOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">Rules</span>
-            </button>
-
-            {room && (
               <button
                 type="button"
                 onClick={() => void leaveRoom()}
@@ -155,17 +154,21 @@ export function App() {
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Leave</span>
               </button>
-            )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {(errorBanner || kickedReason) && (
         <div
           role="alert"
-          className="relative z-30 max-w-2xl mx-auto mt-4 px-4 w-full"
+          className={
+            room
+              ? 'relative z-30 max-w-2xl mx-auto mt-4 px-4 w-full'
+              : 'fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-xl px-4 w-full'
+          }
         >
-          <div className="rounded-xl bg-crimson-900/90 border border-crimson-400/70 px-4 py-3 flex items-center justify-between gap-3 text-sm text-crimson-100 shadow-lg">
+          <div className="rounded-xl bg-crimson-900/95 backdrop-blur-md border border-crimson-400/70 px-4 py-3 flex items-center justify-between gap-3 text-sm text-crimson-100 shadow-2xl">
             <span>{kickedReason ?? errorBanner}</span>
             <button
               type="button"
@@ -179,12 +182,33 @@ export function App() {
       )}
 
       {isRestoringSession && !room ? (
-        <div className="relative z-10 flex-1 flex items-center justify-center">
-          <div className="noir-card rounded-2xl px-8 py-6 text-center space-y-2">
-            <div className="font-display text-lg text-gold-200 uppercase tracking-wider animate-pulse">
-              Reconnecting to Midnight City...
+        <div className="relative z-10 min-h-screen flex items-center px-6 sm:px-12 md:px-16 lg:px-24 bg-[#060405] overflow-hidden">
+          <img
+            src="/assets/mafia-title-bg.jpg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 w-full h-full object-cover object-[74%_24%] md:object-[68%_center] opacity-30"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(6,4,6,0.94) 0%, rgba(7,5,6,0.8) 38%, rgba(6,4,6,0.5) 100%)',
+            }}
+          />
+          <div className="relative z-10 max-w-[380px] space-y-6">
+            <MafiaTitleLogo compact />
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2.5 font-condensed uppercase tracking-[0.16em] text-sm text-amber-300">
+                <span className="inline-block w-2 h-2 rotate-45 border border-amber-400 bg-amber-400/40 animate-spin" />
+                Reconnecting to Midnight City...
+              </div>
+              <div className="h-[2px] w-full bg-cream-100/15 overflow-hidden">
+                <div className="h-full w-2/3 bg-gradient-to-r from-amber-600 via-amber-300 to-cream-50 animate-pulse" />
+              </div>
+              <p className="text-xs text-cream-300/75">Restoring your dossier and table seat.</p>
             </div>
-            <p className="text-xs text-cream-400">Restoring your dossier and seat.</p>
           </div>
         </div>
       ) : !room ? (

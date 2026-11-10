@@ -277,6 +277,57 @@ class MidnightSoundEngine {
     noise.start(now);
   }
 
+  playMenuTick(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain || ctx.state !== 'running') return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(240, now + 0.035);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.04);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.045);
+  }
+
+  playMenuConfirm(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(190, now);
+    osc.frequency.exponentialRampToValueAtTime(82, now + 0.14);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.16, now);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.16);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.17);
+  }
+
+  playMenuBack(): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(310, now);
+    osc.frequency.exponentialRampToValueAtTime(160, now + 0.08);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.09);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
   speakNarration(text: string): void {
     if (this.muted || typeof window === 'undefined' || !('speechSynthesis' in window)) {
       return;

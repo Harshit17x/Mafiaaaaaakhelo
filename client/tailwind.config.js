@@ -43,6 +43,7 @@ export default {
       },
       fontFamily: {
         display: ['"Cinzel"', '"Playfair Display"', 'Georgia', 'serif'],
+        condensed: ['"Barlow Condensed"', '"Arial Narrow"', 'sans-serif'],
         serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
         sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
