@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
+  DEFAULT_ROOM_SETTINGS,
   DEFAULT_TIMINGS,
   DISCONNECT_GRACE_MS,
   HOST_AUTO_TRANSFER_GRACE_MS,
@@ -12,6 +13,7 @@ import {
   sanitizeAvatarConfig,
   sanitizeChatMessage,
   sanitizePlayerName,
+  sanitizeRoomSettingsPatch,
 } from '@midnight-city/shared';
 import type {
   AckResponse,
@@ -201,7 +203,8 @@ export class RoomManager {
   createRoom(
     socketId: string,
     rawName: string,
-    rawAvatar?: PlayerAvatarConfig
+    rawAvatar?: PlayerAvatarConfig,
+    rawSettings?: Partial<RoomSettings>
   ): AckResponse<JoinSuccessPayload> {
     const name = sanitizePlayerName(rawName);
     if (name.length < 1) {
@@ -215,13 +218,18 @@ export class RoomManager {
     const roomCode = this.generateRoomCode();
     const playerId = randomUUID();
     const sessionToken = this.generateSessionToken();
+    const { settings: initialSettings } = sanitizeRoomSettingsPatch(
+      { ...DEFAULT_ROOM_SETTINGS },
+      rawSettings
+    );
+    const shouldHostPlay = initialSettings.narratorMode === 'AUTO_NARRATOR';
 
     const hostPlayer: ServerPlayer = {
       id: playerId,
       name,
       sessionToken,
       isHost: true,
-      isPlaying: true,
+      isPlaying: shouldHostPlay,
       isReady: false,
       isAlive: false,
       role: null,
@@ -236,6 +244,9 @@ export class RoomManager {
     };
 
     const room = createRoomRecord(roomCode, hostPlayer, currentNow);
+    room.settings = initialSettings;
+    room.mafiaCountManualOverride =
+      initialSettings.mafiaCount !== DEFAULT_ROOM_SETTINGS.mafiaCount;
     this.repo.set(room);
     this.bindSocket(socketId, roomCode, playerId);
     this.broadcastRoom(room);
@@ -552,70 +563,12 @@ export class RoomManager {
       return { ok: false, error: 'Settings can only be changed in the lobby.' };
     }
 
-    const next: RoomSettings = { ...room.settings };
-
-    if (partial.narratorMode === 'AUTO_NARRATOR' || partial.narratorMode === 'HUMAN_HOST') {
-      next.narratorMode = partial.narratorMode;
-    }
-    if (typeof partial.mafiaCount === 'number' && Number.isInteger(partial.mafiaCount)) {
-      next.mafiaCount = Math.max(1, Math.min(8, partial.mafiaCount));
+    const { settings: next, mafiaCountUpdated } = sanitizeRoomSettingsPatch(
+      room.settings,
+      partial
+    );
+    if (mafiaCountUpdated) {
       room.mafiaCountManualOverride = true;
-    }
-    if (typeof partial.healerEnabled === 'boolean') {
-      next.healerEnabled = partial.healerEnabled;
-    }
-    if (typeof partial.jokerEnabled === 'boolean') {
-      next.jokerEnabled = partial.jokerEnabled;
-    }
-    if (typeof partial.detectiveEnabled === 'boolean') {
-      next.detectiveEnabled = partial.detectiveEnabled;
-    }
-    if (
-      partial.healerSelfSaveRule === 'unlimited' ||
-      partial.healerSelfSaveRule === 'not_consecutive' ||
-      partial.healerSelfSaveRule === 'once_per_game' ||
-      partial.healerSelfSaveRule === 'never'
-    ) {
-      next.healerSelfSaveRule = partial.healerSelfSaveRule;
-    }
-    if (typeof partial.jokerWinEndsGame === 'boolean') {
-      next.jokerWinEndsGame = partial.jokerWinEndsGame;
-    }
-    if (typeof partial.jokerNightImmunity === 'boolean') {
-      next.jokerNightImmunity = partial.jokerNightImmunity;
-    }
-    if (typeof partial.revealRoleOnDeath === 'boolean') {
-      next.revealRoleOnDeath = partial.revealRoleOnDeath;
-    }
-    if (typeof partial.skipFirstNightKill === 'boolean') {
-      next.skipFirstNightKill = partial.skipFirstNightKill;
-    }
-    if (typeof partial.allowDeadChat === 'boolean') {
-      next.allowDeadChat = partial.allowDeadChat;
-    }
-    if (partial.discussionTimeSec === null || typeof partial.discussionTimeSec === 'number') {
-      next.discussionTimeSec =
-        partial.discussionTimeSec === null
-          ? null
-          : Math.max(15, Math.min(600, Math.round(partial.discussionTimeSec)));
-    }
-    if (partial.votingTimeSec === null || typeof partial.votingTimeSec === 'number') {
-      next.votingTimeSec =
-        partial.votingTimeSec === null
-          ? null
-          : Math.max(10, Math.min(300, Math.round(partial.votingTimeSec)));
-    }
-    if (partial.nightActionTimeSec === null || typeof partial.nightActionTimeSec === 'number') {
-      next.nightActionTimeSec =
-        partial.nightActionTimeSec === null
-          ? null
-          : Math.max(10, Math.min(180, Math.round(partial.nightActionTimeSec)));
-    }
-    if (typeof partial.allowSkipVote === 'boolean') {
-      next.allowSkipVote = partial.allowSkipVote;
-    }
-    if (partial.tieRule === 'no_elimination' || partial.tieRule === 'revote_then_no_elimination') {
-      next.tieRule = partial.tieRule;
     }
 
     room.settings = next;

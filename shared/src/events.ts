@@ -27,7 +27,11 @@ export interface JoinSuccessPayload {
 
 export interface ClientToServerEvents {
   'room:create': (
-    payload: { playerName: string; avatar?: PlayerAvatarConfig },
+    payload: {
+      playerName: string;
+      avatar?: PlayerAvatarConfig;
+      settings?: Partial<RoomSettings>;
+    },
     callback: (res: AckResponse<JoinSuccessPayload>) => void
   ) => void;
   'room:join': (

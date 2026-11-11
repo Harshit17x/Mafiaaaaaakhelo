@@ -283,7 +283,9 @@ export function AvatarPanelModal() {
                 </>
               ) : avatarFlowTarget ? (
                 <>
-                  <span>Continue to Alias</span>
+                  <span>
+                    {avatarFlowTarget === 'create' ? 'Continue to Room Settings' : 'Continue to Alias'}
+                  </span>
                   <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </>
               ) : (

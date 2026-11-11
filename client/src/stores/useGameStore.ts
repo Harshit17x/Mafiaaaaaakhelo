@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { createDefaultAvatarConfig, sanitizeAvatarConfig } from '@midnight-city/shared';
+import {
+  DEFAULT_ROOM_SETTINGS,
+  createDefaultAvatarConfig,
+  sanitizeAvatarConfig,
+  sanitizeRoomSettingsPatch,
+} from '@midnight-city/shared';
 import type {
   AckResponse,
   ChatChannel,
@@ -39,6 +44,7 @@ interface GameStoreState {
   avatarFlowTarget: AvatarFlowTarget;
   avatarCompletedTarget: AvatarFlowTarget;
   myAvatar: PlayerAvatarConfig;
+  pendingRoomSettings: RoomSettings;
   mutedAudio: boolean;
   volume: number;
   voiceSignalListeners: Set<(fromPlayerId: string, signal: VoiceSignalPayload) => void>;
@@ -50,6 +56,8 @@ interface GameStoreState {
   completeAvatarFlow: () => void;
   clearCompletedAvatarFlow: () => void;
   updateAvatar: (avatar: PlayerAvatarConfig) => Promise<boolean>;
+  setPendingRoomSettings: (partial: Partial<RoomSettings>) => void;
+  resetPendingRoomSettings: () => void;
   setMutedAudio: (muted: boolean) => void;
   setVolume: (volume: number) => void;
   registerVoiceSignalListener: (
@@ -57,7 +65,7 @@ interface GameStoreState {
   ) => () => void;
   sendVoiceSignal: (toPlayerId: string, signal: VoiceSignalPayload) => void;
 
-  createRoom: (playerName: string) => Promise<boolean>;
+  createRoom: (playerName: string, settings?: Partial<RoomSettings>) => Promise<boolean>;
   joinRoom: (roomCode: string, playerName: string) => Promise<boolean>;
   leaveRoom: () => Promise<void>;
   setReady: (ready: boolean) => Promise<void>;
@@ -169,6 +177,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     avatarFlowTarget: null,
     avatarCompletedTarget: null,
     myAvatar: initialAvatar,
+    pendingRoomSettings: { ...DEFAULT_ROOM_SETTINGS },
     mutedAudio: initialAudio.muted,
     volume: initialAudio.volume,
     voiceSignalListeners: new Set(),
@@ -319,6 +328,15 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       return true;
     },
 
+    setPendingRoomSettings(partial) {
+      const { settings } = sanitizeRoomSettingsPatch(get().pendingRoomSettings, partial);
+      set({ pendingRoomSettings: settings });
+    },
+
+    resetPendingRoomSettings() {
+      set({ pendingRoomSettings: { ...DEFAULT_ROOM_SETTINGS } });
+    },
+
     setMutedAudio(muted) {
       saveAudioPrefs(muted, get().volume);
       set({ mutedAudio: muted });
@@ -344,13 +362,14 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       }
     },
 
-    async createRoom(playerName) {
+    async createRoom(playerName, settingsOverride) {
       const avatar = get().myAvatar;
+      const settings = settingsOverride ?? get().pendingRoomSettings;
       const res = await invokeAck<{
         roomCode: string;
         playerId: string;
         sessionToken: string;
-      }>((sock, done) => sock.emit('room:create', { playerName, avatar }, done));
+      }>((sock, done) => sock.emit('room:create', { playerName, avatar, settings }, done));
       if (res.ok) {
         saveStoredSession({
           roomCode: res.roomCode,

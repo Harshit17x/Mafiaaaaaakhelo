@@ -273,5 +273,36 @@ describe('Phase 2: server rooms, settings, reconnection, filtered views & voice 
     await new Promise((r) => setTimeout(r, 60));
     expect(players[0]!.getLatestState().game.paused).toBe(false);
   });
+
+  it('applies custom initial room settings passed in room:create', async () => {
+    const { url } = await startTestServer();
+    const h = await connectClient(url);
+    const res = await emitAsync<{ ok: boolean; roomCode: string }>(
+      h.socket,
+      'room:create',
+      {
+        playerName: 'ConfigHost',
+        settings: {
+          narratorMode: 'HUMAN_HOST',
+          mafiaCount: 2,
+          detectiveEnabled: true,
+          jokerEnabled: true,
+          discussionTimeSec: 120,
+          tieRule: 'revote_then_no_elimination',
+        },
+      }
+    );
+    expect(res.ok).toBe(true);
+    await new Promise((r) => setTimeout(r, 50));
+
+    const view = h.getLatestState();
+    expect(view.settings.narratorMode).toBe('HUMAN_HOST');
+    expect(view.settings.mafiaCount).toBe(2);
+    expect(view.settings.detectiveEnabled).toBe(true);
+    expect(view.settings.jokerEnabled).toBe(true);
+    expect(view.settings.discussionTimeSec).toBe(120);
+    expect(view.settings.tieRule).toBe('revote_then_no_elimination');
+    expect(view.players[0]!.isPlaying).toBe(false);
+  });
 });
 

@@ -13,6 +13,7 @@ import {
 import { soundEngine } from '../audio/SoundEngine';
 import { AudioControls } from '../components/AudioControls';
 import { AvatarPolaroidCard, resolveAvatarLabel } from '../components/AvatarPolaroidCard';
+import { HouseRulesEditor } from '../components/HouseRulesEditor';
 import { LivePlayersBadge } from '../components/LivePlayersBadge';
 import { MafiaTitleLogo } from '../components/MafiaTitleLogo';
 import { MobsterPaperScene } from '../components/MobsterPaperScene';
@@ -87,6 +88,9 @@ export function HomePage() {
   const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
   const clearCompletedAvatarFlow = useGameStore((s) => s.clearCompletedAvatarFlow);
   const myAvatar = useGameStore((s) => s.myAvatar);
+  const pendingRoomSettings = useGameStore((s) => s.pendingRoomSettings);
+  const setPendingRoomSettings = useGameStore((s) => s.setPendingRoomSettings);
+  const resetPendingRoomSettings = useGameStore((s) => s.resetPendingRoomSettings);
   const connectionStatus = useGameStore((s) => s.connectionStatus);
   const mutedAudio = useGameStore((s) => s.mutedAudio);
   const setMutedAudio = useGameStore((s) => s.setMutedAudio);
@@ -300,7 +304,7 @@ export function HomePage() {
     setLocalError(null);
     setSubmitting(true);
     soundEngine.playMenuConfirm();
-    await createRoom(playerName);
+    await createRoom(playerName, pendingRoomSettings);
     setSubmitting(false);
   };
 
@@ -553,82 +557,7 @@ export function HomePage() {
                 </p>
               </div>
             </section>
-          ) : activePanel === 'create' ? (
-            <section
-              key="create-panel"
-              aria-label="Create Room"
-              className="w-full max-w-[360px] animate-title-enter"
-            >
-                <h2 className="font-condensed font-light uppercase tracking-[0.07em] text-2xl sm:text-[28px] leading-none text-cream-50/95 mb-3">
-                  CREATE PRIVATE TABLE
-                </h2>
-                <div className="title-rule w-full mb-4" />
-
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="player-name-input"
-                      className="block font-condensed uppercase tracking-[0.18em] text-xs text-amber-300/90 mb-1.5"
-                    >
-                      Your Alias
-                    </label>
-                    <input
-                      ref={aliasInputRef}
-                      id="player-name-input"
-                      type="text"
-                      value={playerName}
-                      onChange={(e) => setPlayerName(e.target.value)}
-                      maxLength={20}
-                      placeholder="e.g. Detective Vance"
-                      className="w-full bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-sm px-3.5 py-2.5 text-sm text-cream-50 placeholder:text-cream-400/50 transition"
-                    />
-                  </div>
-
-                  {avatarSelectorBar}
-
-                  {localError && (
-                    <p role="alert" className="text-xs text-crimson-400 font-medium">
-                      {localError}
-                    </p>
-                  )}
-
-                  {connectionStatus !== 'connected' && (
-                    <p className="text-xs text-amber-300/90">
-                      Connecting to game server — button activates once online.
-                    </p>
-                  )}
-
-                  <div className="space-y-2 pt-1">
-                    <button
-                      type="submit"
-                      disabled={disabled}
-                      className="w-full py-2.5 px-4 rounded-sm bg-gradient-to-r from-[#b87424] via-[#d28d34] to-[#b87424] hover:brightness-110 text-[#0d0804] font-condensed font-bold uppercase tracking-[0.14em] text-base inline-flex items-center justify-center gap-2 transition shadow-[0_8px_24px_rgba(184,116,36,0.3)] disabled:opacity-60"
-                    >
-                      <Plus className="w-4 h-4" aria-hidden="true" />
-                      {submitting ? 'Opening Table...' : 'Open Table'}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        soundEngine.playMenuBack();
-                        setLocalError(null);
-                        setActivePanel('menu');
-                      }}
-                      className="w-full py-2 px-2 text-left font-condensed uppercase tracking-[0.14em] text-xs text-cream-100/75 hover:text-cream-50 inline-flex items-center gap-1.5 transition"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                      Back to Title Menu
-                    </button>
-                  </div>
-                </form>
-
-                <div className="title-rule w-full mt-4 mb-2.5" />
-                <p className="text-xs text-cream-100/65">
-                  5–16 players • Private Voice &amp; Text • Host customizes roles in the lounge.
-                </p>
-              </section>
-            ) : activePanel === 'join' ? (
+          ) : activePanel === 'join' ? (
               <section
                 key="join-panel"
                 aria-label="Join Room"
@@ -873,6 +802,119 @@ export function HomePage() {
           )}
         </div>
       </footer>
+
+      {activePanel === 'create' && !avatarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-5"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Create Room Setup and House Rules"
+        >
+          <div className="relative w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden rounded-2xl border border-gold-500/35 bg-[#0c0a0d] shadow-[0_28px_80px_rgba(0,0,0,0.9)]">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-gold-500/20 bg-noir-950/90">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEngine.playMenuBack();
+                    setAvatarOpen(true, 'create');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-500/35 bg-noir-900 hover:bg-noir-800 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                  Back to Avatar
+                </button>
+                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/50 text-[10px] font-mono uppercase tracking-[0.18em] text-amber-200 font-bold">
+                  Step 2 of 2 • Table &amp; Rules
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundEngine.playMenuBack();
+                  setLocalError(null);
+                  setActivePanel('menu');
+                }}
+                className="text-xs font-condensed uppercase tracking-[0.14em] text-cream-300 hover:text-cream-50 px-2.5 py-1 rounded hover:bg-noir-800 transition cursor-pointer"
+              >
+                Title Menu
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+              <div className="grid lg:grid-cols-12 gap-5 items-start">
+                <form onSubmit={handleCreate} className="lg:col-span-4 space-y-4">
+                  <div className="rounded-2xl border border-gold-500/25 bg-noir-950/90 p-4 space-y-4">
+                    <div>
+                      <h2 className="font-display text-lg text-gold-200 uppercase tracking-wider">
+                        Create Private Table
+                      </h2>
+                      <p className="text-xs text-cream-400 mt-0.5">
+                        Enter your alias and review your pinned dossier card.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="player-name-input"
+                        className="block font-condensed uppercase tracking-[0.18em] text-xs text-amber-300/90 mb-1.5"
+                      >
+                        Your Alias
+                      </label>
+                      <input
+                        ref={aliasInputRef}
+                        id="player-name-input"
+                        type="text"
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        maxLength={20}
+                        placeholder="e.g. Detective Vance"
+                        className="w-full bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-lg px-3.5 py-2.5 text-sm text-cream-50 placeholder:text-cream-400/50 transition"
+                      />
+                    </div>
+
+                    {avatarSelectorBar}
+
+                    {localError && (
+                      <p role="alert" className="text-xs text-crimson-400 font-medium">
+                        {localError}
+                      </p>
+                    )}
+
+                    {connectionStatus !== 'connected' && (
+                      <p className="text-xs text-amber-300/90">
+                        Connecting to game server — button activates once online.
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={disabled}
+                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#b87424] via-[#d28d34] to-[#b87424] hover:brightness-110 text-[#0d0804] font-display font-bold uppercase tracking-[0.14em] text-sm inline-flex items-center justify-center gap-2 transition shadow-[0_8px_24px_rgba(184,116,36,0.3)] disabled:opacity-60 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" aria-hidden="true" />
+                      {submitting ? 'Opening Table...' : 'Open Table'}
+                    </button>
+
+                    <p className="text-[11px] text-cream-400 leading-relaxed">
+                      5–16 players • Private Voice &amp; Text • Rules configured here apply to the table when created.
+                    </p>
+                  </div>
+                </form>
+
+                <div className="lg:col-span-8">
+                  <HouseRulesEditor
+                    settings={pendingRoomSettings}
+                    onChange={setPendingRoomSettings}
+                    onReset={resetPendingRoomSettings}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

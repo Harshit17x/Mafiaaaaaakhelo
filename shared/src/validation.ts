@@ -238,3 +238,90 @@ export function sanitizeAvatarConfig(raw: unknown, seed?: string): PlayerAvatarC
   };
 }
 
+export function sanitizeRoomSettingsPatch(
+  base: RoomSettings,
+  rawPartial: unknown
+): { settings: RoomSettings; mafiaCountUpdated: boolean } {
+  const next: RoomSettings = { ...base };
+  let mafiaCountUpdated = false;
+  if (!rawPartial || typeof rawPartial !== 'object') {
+    return { settings: next, mafiaCountUpdated };
+  }
+  const partial = rawPartial as Partial<RoomSettings>;
+
+  if (partial.narratorMode === 'AUTO_NARRATOR' || partial.narratorMode === 'HUMAN_HOST') {
+    next.narratorMode = partial.narratorMode;
+  }
+  if (typeof partial.mafiaCount === 'number' && Number.isInteger(partial.mafiaCount)) {
+    next.mafiaCount = Math.max(1, Math.min(8, partial.mafiaCount));
+    mafiaCountUpdated = true;
+  }
+  if (typeof partial.healerEnabled === 'boolean') {
+    next.healerEnabled = partial.healerEnabled;
+  }
+  if (typeof partial.jokerEnabled === 'boolean') {
+    next.jokerEnabled = partial.jokerEnabled;
+  }
+  if (typeof partial.detectiveEnabled === 'boolean') {
+    next.detectiveEnabled = partial.detectiveEnabled;
+  }
+  if (
+    partial.healerSelfSaveRule === 'unlimited' ||
+    partial.healerSelfSaveRule === 'not_consecutive' ||
+    partial.healerSelfSaveRule === 'once_per_game' ||
+    partial.healerSelfSaveRule === 'never'
+  ) {
+    next.healerSelfSaveRule = partial.healerSelfSaveRule;
+  }
+  if (typeof partial.jokerWinEndsGame === 'boolean') {
+    next.jokerWinEndsGame = partial.jokerWinEndsGame;
+  }
+  if (typeof partial.jokerNightImmunity === 'boolean') {
+    next.jokerNightImmunity = partial.jokerNightImmunity;
+  }
+  if (typeof partial.revealRoleOnDeath === 'boolean') {
+    next.revealRoleOnDeath = partial.revealRoleOnDeath;
+  }
+  if (typeof partial.skipFirstNightKill === 'boolean') {
+    next.skipFirstNightKill = partial.skipFirstNightKill;
+  }
+  if (typeof partial.allowDeadChat === 'boolean') {
+    next.allowDeadChat = partial.allowDeadChat;
+  }
+  if (
+    partial.discussionTimeSec === null ||
+    (typeof partial.discussionTimeSec === 'number' && Number.isFinite(partial.discussionTimeSec))
+  ) {
+    next.discussionTimeSec =
+      partial.discussionTimeSec === null
+        ? null
+        : Math.max(15, Math.min(600, Math.round(partial.discussionTimeSec)));
+  }
+  if (
+    partial.votingTimeSec === null ||
+    (typeof partial.votingTimeSec === 'number' && Number.isFinite(partial.votingTimeSec))
+  ) {
+    next.votingTimeSec =
+      partial.votingTimeSec === null
+        ? null
+        : Math.max(10, Math.min(300, Math.round(partial.votingTimeSec)));
+  }
+  if (
+    partial.nightActionTimeSec === null ||
+    (typeof partial.nightActionTimeSec === 'number' && Number.isFinite(partial.nightActionTimeSec))
+  ) {
+    next.nightActionTimeSec =
+      partial.nightActionTimeSec === null
+        ? null
+        : Math.max(10, Math.min(180, Math.round(partial.nightActionTimeSec)));
+  }
+  if (typeof partial.allowSkipVote === 'boolean') {
+    next.allowSkipVote = partial.allowSkipVote;
+  }
+  if (partial.tieRule === 'no_elimination' || partial.tieRule === 'revote_then_no_elimination') {
+    next.tieRule = partial.tieRule;
+  }
+
+  return { settings: next, mafiaCountUpdated };
+}
+

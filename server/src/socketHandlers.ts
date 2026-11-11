@@ -141,7 +141,9 @@ export function registerSocketHandlers(
 
     socket.on('room:create', (payload, callback) => {
       if (!checkGeneralRate(callback)) return;
-      callback(manager.createRoom(socket.id, payload?.playerName ?? '', payload?.avatar));
+      callback(
+        manager.createRoom(socket.id, payload?.playerName ?? '', payload?.avatar, payload?.settings)
+      );
     });
 
     socket.on('room:join', (payload, callback) => {
