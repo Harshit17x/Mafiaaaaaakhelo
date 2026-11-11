@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   DEFAULT_ROOM_SETTINGS,
+  LOBBY_COUNTDOWN_MS,
   createDefaultAvatarConfig,
   sanitizeAvatarConfig,
   sanitizeRoomSettingsPatch,
@@ -18,6 +19,12 @@ import type {
   VoiceSignalPayload,
   VoiceState,
 } from '@midnight-city/shared';
+import {
+  DEFAULT_DEV_CONFIG,
+  buildDevMockState,
+  isGodModeAvailable,
+} from '../dev/devGodMode';
+import type { DevGodModeConfig } from '../dev/devGodMode';
 import {
   clearStoredSession,
   createGameSocket,
@@ -44,6 +51,12 @@ interface GameStoreState {
   lobbyPositions: Record<string, LobbyCharacterPosition>;
   voiceState: VoiceState | null;
   chatMessages: ChatMessage[];
+  liveRoom: ClientRoomView | null;
+  liveLobbyPositions: Record<string, LobbyCharacterPosition>;
+  liveVoiceState: VoiceState | null;
+  liveChatMessages: ChatMessage[];
+  devGodConfig: DevGodModeConfig | null;
+  devSpeakingPeerIds: string[];
   errorBanner: string | null;
   kickedReason: string | null;
   lastNarration: { key: string; text: string; seq: number } | null;
@@ -73,6 +86,11 @@ interface GameStoreState {
     facing: 'left' | 'right';
     moving: boolean;
   }) => void;
+  setDevGodConfig: (partial: Partial<DevGodModeConfig>) => void;
+  resetDevGodScene: () => void;
+  exitDevGodMode: () => void;
+  stepDevLobbyBots: () => void;
+  pushDevChatMessage: (channel: ChatChannel, senderName: string, content: string) => void;
   setPendingRoomSettings: (partial: Partial<RoomSettings>) => void;
   resetPendingRoomSettings: () => void;
   setMutedAudio: (muted: boolean) => void;
@@ -205,6 +223,36 @@ const initialAudio = loadAudioPrefs();
 const initialAvatar = loadAvatarPrefs();
 const initialSavedCustomAvatars = loadSavedCustomAvatars(initialAvatar);
 
+const DEV_GOD_STORAGE_KEY = 'midnight_city_dev_god_v1';
+
+function loadDevGodConfig(): DevGodModeConfig | null {
+  if (!isGodModeAvailable()) return null;
+  try {
+    const raw = sessionStorage.getItem(DEV_GOD_STORAGE_KEY);
+    if (raw) {
+      return { ...DEFAULT_DEV_CONFIG, ...(JSON.parse(raw) as Partial<DevGodModeConfig>) };
+    }
+  } catch {
+  }
+  return null;
+}
+
+function saveDevGodConfig(config: DevGodModeConfig | null): void {
+  try {
+    if (config) {
+      sessionStorage.setItem(DEV_GOD_STORAGE_KEY, JSON.stringify(config));
+    } else {
+      sessionStorage.removeItem(DEV_GOD_STORAGE_KEY);
+    }
+  } catch {
+  }
+}
+
+const initialDevConfig = loadDevGodConfig();
+const initialDevMock = initialDevConfig
+  ? buildDevMockState(initialDevConfig, initialAvatar)
+  : null;
+
 export const useGameStore = create<GameStoreState>((set, get) => {
   async function invokeAck<T = undefined>(
     fn: (socket: TypedGameSocket, done: (res: AckResponse<T>) => void) => void
@@ -230,10 +278,16 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     connectionStatus: 'connecting',
     isRestoringSession: Boolean(loadStoredSession()),
     liveStats: null,
-    room: null,
-    lobbyPositions: {},
-    voiceState: null,
-    chatMessages: [],
+    room: initialDevMock?.room ?? null,
+    lobbyPositions: initialDevMock?.lobbyPositions ?? {},
+    voiceState: initialDevMock?.voiceState ?? null,
+    chatMessages: initialDevMock?.chatMessages ?? [],
+    liveRoom: null,
+    liveLobbyPositions: {},
+    liveVoiceState: null,
+    liveChatMessages: [],
+    devGodConfig: initialDevConfig,
+    devSpeakingPeerIds: initialDevMock?.speakingPeerIds ?? [],
     errorBanner: null,
     kickedReason: null,
     lastNarration: null,
@@ -293,24 +347,52 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       });
 
       socket.on('room:state', (room) => {
-        set({ room, lobbyPositions: room.lobbyPositions ?? {} });
+        if (get().devGodConfig) {
+          set({ liveRoom: room, liveLobbyPositions: room.lobbyPositions ?? {} });
+          return;
+        }
+        set({
+          room,
+          lobbyPositions: room.lobbyPositions ?? {},
+          liveRoom: room,
+          liveLobbyPositions: room.lobbyPositions ?? {},
+        });
       });
 
       socket.on('lobby:positions', (lobbyPositions) => {
-        set({ lobbyPositions });
+        if (get().devGodConfig) {
+          set({ liveLobbyPositions: lobbyPositions });
+          return;
+        }
+        set({ lobbyPositions, liveLobbyPositions: lobbyPositions });
       });
 
       socket.on('voice:state', (voiceState) => {
-        set({ voiceState });
+        if (get().devGodConfig) {
+          set({ liveVoiceState: voiceState });
+          return;
+        }
+        set({ voiceState, liveVoiceState: voiceState });
       });
 
       socket.on('chat:history', (messages) => {
-        set({ chatMessages: messages });
+        if (get().devGodConfig) {
+          set({ liveChatMessages: messages });
+          return;
+        }
+        set({ chatMessages: messages, liveChatMessages: messages });
       });
 
       socket.on('chat:message', (message) => {
+        if (get().devGodConfig) {
+          set((state) => ({
+            liveChatMessages: [...state.liveChatMessages.slice(-299), message],
+          }));
+          return;
+        }
         set((state) => ({
           chatMessages: [...state.chatMessages.slice(-299), message],
+          liveChatMessages: [...state.liveChatMessages.slice(-299), message],
         }));
       });
 
@@ -326,11 +408,25 @@ export const useGameStore = create<GameStoreState>((set, get) => {
 
       socket.on('room:kicked', ({ reason }) => {
         clearStoredSession();
+        if (get().devGodConfig) {
+          set({
+            liveRoom: null,
+            liveLobbyPositions: {},
+            liveVoiceState: null,
+            liveChatMessages: [],
+            kickedReason: reason,
+          });
+          return;
+        }
         set({
           room: null,
           lobbyPositions: {},
           voiceState: null,
           chatMessages: [],
+          liveRoom: null,
+          liveLobbyPositions: {},
+          liveVoiceState: null,
+          liveChatMessages: [],
           kickedReason: reason,
         });
       });
@@ -389,7 +485,18 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       const clean = sanitizeAvatarConfig(rawAvatar);
       saveAvatarPrefs(clean);
       set({ myAvatar: clean });
-      const { room, socket } = get();
+      const { devGodConfig, room, socket } = get();
+      if (devGodConfig && room) {
+        set({
+          room: {
+            ...room,
+            players: room.players.map((p) =>
+              p.id === room.myPlayerId ? { ...p, avatar: clean } : p
+            ),
+          },
+        });
+        return true;
+      }
       if (room && socket && socket.connected) {
         const res = await invokeAck((sock, done) =>
           sock.emit('room:update_avatar', { avatar: clean }, done)
@@ -431,10 +538,112 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     },
 
     sendLobbyMove(pos) {
-      const { socket, room } = get();
+      const { devGodConfig, socket, room, lobbyPositions } = get();
+      if (devGodConfig && room?.game.phase === 'LOBBY') {
+        set({
+          lobbyPositions: {
+            ...lobbyPositions,
+            [room.myPlayerId]: {
+              ...pos,
+              updatedAt: Date.now(),
+            },
+          },
+        });
+        return;
+      }
       if (socket && socket.connected && room?.game.phase === 'LOBBY') {
         socket.emit('lobby:move', pos);
       }
+    },
+
+    setDevGodConfig(partial) {
+      if (!isGodModeAvailable()) return;
+      const next: DevGodModeConfig = {
+        ...(get().devGodConfig ?? DEFAULT_DEV_CONFIG),
+        ...partial,
+      };
+      saveDevGodConfig(next);
+      const mock = buildDevMockState(next, get().myAvatar);
+      set({
+        devGodConfig: next,
+        room: mock.room,
+        lobbyPositions: mock.lobbyPositions,
+        chatMessages: mock.chatMessages,
+        voiceState: mock.voiceState,
+        devSpeakingPeerIds: mock.speakingPeerIds,
+        errorBanner: null,
+      });
+    },
+
+    resetDevGodScene() {
+      const cfg = get().devGodConfig;
+      if (!cfg) return;
+      const mock = buildDevMockState(cfg, get().myAvatar);
+      set({
+        room: mock.room,
+        lobbyPositions: mock.lobbyPositions,
+        chatMessages: mock.chatMessages,
+        voiceState: mock.voiceState,
+        devSpeakingPeerIds: mock.speakingPeerIds,
+      });
+    },
+
+    exitDevGodMode() {
+      saveDevGodConfig(null);
+      const { liveRoom, liveLobbyPositions, liveChatMessages, liveVoiceState } = get();
+      set({
+        devGodConfig: null,
+        room: liveRoom,
+        lobbyPositions: liveLobbyPositions,
+        chatMessages: liveChatMessages,
+        voiceState: liveVoiceState,
+        devSpeakingPeerIds: [],
+      });
+    },
+
+    stepDevLobbyBots() {
+      const { devGodConfig, room, lobbyPositions } = get();
+      if (!devGodConfig || !room || room.game.phase !== 'LOBBY') return;
+      const nextPositions: Record<string, LobbyCharacterPosition> = { ...lobbyPositions };
+      const now = Date.now();
+      for (const p of room.players) {
+        if (p.id === room.myPlayerId) continue;
+        const cur = nextPositions[p.id] ?? {
+          x: 480,
+          y: 335,
+          facing: 'right' as const,
+          moving: false,
+          updatedAt: now,
+        };
+        const dx = Math.round((Math.random() - 0.5) * 90);
+        const dy = Math.round((Math.random() - 0.5) * 60);
+        const nx = Math.max(90, Math.min(900, cur.x + dx));
+        const ny = Math.max(150, Math.min(520, cur.y + dy));
+        nextPositions[p.id] = {
+          x: nx,
+          y: ny,
+          facing: dx < 0 ? 'left' : dx > 0 ? 'right' : cur.facing,
+          moving: Math.hypot(nx - cur.x, ny - cur.y) > 4,
+          updatedAt: now,
+        };
+      }
+      set({ lobbyPositions: nextPositions });
+    },
+
+    pushDevChatMessage(channel, senderName, content) {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+      const msg: ChatMessage = {
+        id: `dev-chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        channel,
+        senderId: 'dev-sim',
+        senderName,
+        content: trimmed,
+        timestamp: Date.now(),
+      };
+      set((state) => ({
+        chatMessages: [...state.chatMessages.slice(-299), msg],
+      }));
     },
 
     setPendingRoomSettings(partial) {
@@ -518,6 +727,10 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     },
 
     async leaveRoom() {
+      if (get().devGodConfig) {
+        get().exitDevGodMode();
+        return;
+      }
       await invokeAck((sock, done) => sock.emit('room:leave', done));
       clearStoredSession();
       try {
@@ -529,11 +742,37 @@ export const useGameStore = create<GameStoreState>((set, get) => {
         lobbyPositions: {},
         voiceState: null,
         chatMessages: [],
+        liveRoom: null,
+        liveLobbyPositions: {},
+        liveVoiceState: null,
+        liveChatMessages: [],
         errorBanner: null,
       });
     },
 
     async setReady(ready) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        const nextPlayers = room.players.map((p) =>
+          p.id === room.myPlayerId ? { ...p, isReady: ready } : p
+        );
+        const playing = nextPlayers.filter((p) => p.isPlaying);
+        const allReady = playing.length > 0 && playing.every((p) => p.isReady);
+        set({
+          room: {
+            ...room,
+            players: nextPlayers,
+            game: {
+              ...room.game,
+              lobbyCountdownEndsAt:
+                room.game.phase === 'LOBBY' && allReady && room.validation.valid
+                  ? Date.now() + LOBBY_COUNTDOWN_MS
+                  : null,
+            },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) => sock.emit('room:set_ready', { ready }, done));
     },
 
@@ -544,74 +783,238 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     },
 
     async kickPlayer(targetPlayerId) {
+      const { devGodConfig, room, lobbyPositions } = get();
+      if (devGodConfig && room) {
+        const nextPositions = { ...lobbyPositions };
+        delete nextPositions[targetPlayerId];
+        set({
+          room: {
+            ...room,
+            players: room.players.filter((p) => p.id !== targetPlayerId),
+          },
+          lobbyPositions: nextPositions,
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('room:kick_player', { targetPlayerId }, done)
       );
     },
 
     async transferHost(targetPlayerId) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        set({
+          room: {
+            ...room,
+            players: room.players.map((p) => ({
+              ...p,
+              isHost: p.id === targetPlayerId,
+            })),
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('room:transfer_host', { targetPlayerId }, done)
       );
     },
 
     async toggleLock(locked) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        set({ room: { ...room, locked } });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('room:toggle_lock', { locked }, done)
       );
     },
 
     async startGame() {
+      if (get().devGodConfig) {
+        get().setDevGodConfig({ page: 'ROLE_REVEAL' });
+        return;
+      }
       await invokeAck((sock, done) => sock.emit('game:start', done));
     },
 
     async acknowledgeRole() {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        set({
+          room: {
+            ...room,
+            game: { ...room.game, myRoleAcknowledged: true },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) => sock.emit('game:acknowledge_role', done));
     },
 
     async nightMafiaSelect(targetPlayerId) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room && room.game.night) {
+        set({
+          room: {
+            ...room,
+            game: {
+              ...room.game,
+              night: {
+                ...room.game.night,
+                mySelection: targetPlayerId,
+                mafiaVotes: { ...(room.game.night.mafiaVotes ?? {}), [room.myPlayerId]: targetPlayerId },
+              },
+            },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:night_mafia_select', { targetPlayerId }, done)
       );
     },
 
     async nightMafiaConfirmTruce() {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room && room.game.night) {
+        set({
+          room: {
+            ...room,
+            game: { ...room.game, night: { ...room.game.night, hasSubmitted: true } },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:night_mafia_confirm_truce', done)
       );
     },
 
     async nightHealerSelect(targetPlayerId) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room && room.game.night) {
+        set({
+          room: {
+            ...room,
+            game: {
+              ...room.game,
+              night: { ...room.game.night, mySelection: targetPlayerId, hasSubmitted: true },
+            },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:night_healer_select', { targetPlayerId }, done)
       );
     },
 
     async nightDetectiveSelect(targetPlayerId) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room && room.game.night) {
+        const target = room.players.find((p) => p.id === targetPlayerId);
+        set({
+          room: {
+            ...room,
+            game: {
+              ...room.game,
+              night: {
+                ...room.game.night,
+                mySelection: targetPlayerId,
+                hasSubmitted: true,
+                detectiveResult: {
+                  nightNumber: room.game.roundNumber,
+                  targetId: targetPlayerId,
+                  targetName: target?.name ?? 'Suspect',
+                  isMafia: target?.role === 'MAFIA',
+                },
+              },
+            },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:night_detective_select', { targetPlayerId }, done)
       );
     },
 
     async toggleAccuse(targetPlayerId) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        set({
+          room: {
+            ...room,
+            players: room.players.map((p) =>
+              p.id === room.myPlayerId
+                ? {
+                    ...p,
+                    accuseTargetId: p.accuseTargetId === targetPlayerId ? null : targetPlayerId,
+                  }
+                : p
+            ),
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:toggle_accuse', { targetPlayerId }, done)
       );
     },
 
     async toggleReadyToVote(ready) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        set({
+          room: {
+            ...room,
+            players: room.players.map((p) =>
+              p.id === room.myPlayerId ? { ...p, readyToVote: ready } : p
+            ),
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:toggle_ready_to_vote', { ready }, done)
       );
     },
 
     async castVote(targetId) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room && room.game.vote) {
+        set({
+          room: {
+            ...room,
+            players: room.players.map((p) =>
+              p.id === room.myPlayerId ? { ...p, hasVoted: true } : p
+            ),
+            game: {
+              ...room.game,
+              vote: {
+                ...room.game.vote,
+                myVote: targetId,
+                votedPlayerIds: Array.from(
+                  new Set([...room.game.vote.votedPlayerIds, room.myPlayerId])
+                ),
+              },
+            },
+          },
+        });
+        return;
+      }
       await invokeAck((sock, done) =>
         sock.emit('game:cast_vote', { targetId }, done)
       );
     },
 
     async playAgain() {
+      if (get().devGodConfig) {
+        get().setDevGodConfig({ page: 'LOBBY', lobbyAllReadyCountdown: false });
+        return;
+      }
       await invokeAck((sock, done) => sock.emit('game:play_again', done));
     },
 
@@ -658,6 +1061,12 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     },
 
     async sendChat(channel, content) {
+      const { devGodConfig, room } = get();
+      if (devGodConfig && room) {
+        const me = room.players.find((p) => p.id === room.myPlayerId);
+        get().pushDevChatMessage(channel, me?.name ?? 'You', content);
+        return true;
+      }
       const res = await invokeAck((sock, done) =>
         sock.emit('chat:send', { channel, content }, done)
       );

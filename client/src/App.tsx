@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, LogOut, Radio, WifiOff } from 'lucide-react';
 import { soundEngine } from './audio/SoundEngine';
 import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
 import { AvatarPanelModal } from './components/AvatarPanelModal';
+import { DevGodModePanel } from './components/DevGodModePanel';
 import { GodViewPanel } from './components/GodViewPanel';
 import { HostControlsBar } from './components/HostControlsBar';
 import { LivePlayersBadge } from './components/LivePlayersBadge';
@@ -36,8 +37,15 @@ export function App() {
   const mutedAudio = useGameStore((s) => s.mutedAudio);
   const volume = useGameStore((s) => s.volume);
   const lastNarration = useGameStore((s) => s.lastNarration);
+  const devSpeakingPeerIds = useGameStore((s) => s.devSpeakingPeerIds);
 
   const [speakingPeerIds, setSpeakingPeerIds] = useState<Set<string>>(() => new Set());
+  const effectiveSpeakingPeerIds = useMemo(() => {
+    if (devSpeakingPeerIds.length === 0) return speakingPeerIds;
+    const merged = new Set(speakingPeerIds);
+    for (const id of devSpeakingPeerIds) merged.add(id);
+    return merged;
+  }, [speakingPeerIds, devSpeakingPeerIds]);
   const prevPhaseRef = useRef<string | null>(null);
   const prevNarrationSeqRef = useRef<number>(0);
 
@@ -248,17 +256,17 @@ export function App() {
               transition={{ duration: 0.25 }}
             >
               {room.game.phase === 'LOBBY' && (
-                <LobbyPage speakingPeerIds={speakingPeerIds} />
+                <LobbyPage speakingPeerIds={effectiveSpeakingPeerIds} />
               )}
               {room.game.phase === 'ROLE_REVEAL' && <RoleRevealPage />}
               {room.game.phase === 'NIGHT' && (
-                <NightPage speakingPeerIds={speakingPeerIds} />
+                <NightPage speakingPeerIds={effectiveSpeakingPeerIds} />
               )}
               {room.game.phase === 'DAWN' && <DawnPage />}
               {(room.game.phase === 'DAY_DISCUSSION' ||
                 room.game.phase === 'DAY_VOTE' ||
                 room.game.phase === 'VOTE_RESULT') && (
-                <DayTablePage speakingPeerIds={speakingPeerIds} />
+                <DayTablePage speakingPeerIds={effectiveSpeakingPeerIds} />
               )}
               {room.game.phase === 'GAME_OVER' && <GameOverPage />}
             </motion.div>
@@ -268,6 +276,7 @@ export function App() {
 
       <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
       <AvatarPanelModal />
+      <DevGodModePanel />
     </div>
   );
 }
