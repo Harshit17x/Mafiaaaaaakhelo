@@ -13,6 +13,7 @@ import type {
   PlayerAvatarConfig,
 } from '@midnight-city/shared';
 import {
+  ArrowRight,
   Check,
   ChevronLeft,
   RotateCcw,
@@ -91,8 +92,10 @@ async function resizeImageFileToDataUrl(file: File): Promise<string> {
 
 export function AvatarPanelModal() {
   const avatarOpen = useGameStore((s) => s.avatarOpen);
+  const avatarFlowTarget = useGameStore((s) => s.avatarFlowTarget);
   const myAvatar = useGameStore((s) => s.myAvatar);
   const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
+  const completeAvatarFlow = useGameStore((s) => s.completeAvatarFlow);
   const updateAvatar = useGameStore((s) => s.updateAvatar);
 
   const [draft, setDraft] = useState<PlayerAvatarConfig>(myAvatar);
@@ -127,7 +130,11 @@ export function AvatarPanelModal() {
     setSaving(true);
     try {
       await updateAvatar(draft);
-      setAvatarOpen(false);
+      if (avatarFlowTarget) {
+        completeAvatarFlow();
+      } else {
+        setAvatarOpen(false);
+      }
     } finally {
       setSaving(false);
     }
@@ -240,7 +247,12 @@ export function AvatarPanelModal() {
               <span>BACK</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-2 pl-2">
+            <div className="hidden sm:flex items-center gap-2.5 pl-2">
+              {avatarFlowTarget && (
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/50 text-[10px] font-mono uppercase tracking-[0.18em] text-amber-200 font-bold">
+                  Step 1 of 2 • {avatarFlowTarget === 'create' ? 'Create Room' : 'Join Room'}
+                </span>
+              )}
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
               <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-cream-300">
                 Active: <strong className="text-gold-300">{activeLabel}</strong>
@@ -264,8 +276,22 @@ export function AvatarPanelModal() {
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-r from-[#148653] to-[#1aa366] hover:brightness-110 border border-emerald-300/50 text-xs sm:text-sm font-condensed font-black uppercase tracking-wider text-white shadow-lg disabled:opacity-60 transition cursor-pointer"
             >
-              <Check className="w-4 h-4 stroke-[2.5]" />
-              {saving ? 'Saving...' : 'Equip Avatar'}
+              {saving ? (
+                <>
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>Saving...</span>
+                </>
+              ) : avatarFlowTarget ? (
+                <>
+                  <span>Continue to Alias</span>
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>Equip Avatar</span>
+                </>
+              )}
             </button>
           </div>
         </div>

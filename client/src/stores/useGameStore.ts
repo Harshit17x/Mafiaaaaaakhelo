@@ -21,6 +21,7 @@ import {
 import type { TypedGameSocket } from '../services/socket';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+export type AvatarFlowTarget = 'create' | 'join' | null;
 
 interface GameStoreState {
   socket: TypedGameSocket | null;
@@ -35,6 +36,8 @@ interface GameStoreState {
   lastNarration: { key: string; text: string; seq: number } | null;
   rulesOpen: boolean;
   avatarOpen: boolean;
+  avatarFlowTarget: AvatarFlowTarget;
+  avatarCompletedTarget: AvatarFlowTarget;
   myAvatar: PlayerAvatarConfig;
   mutedAudio: boolean;
   volume: number;
@@ -43,7 +46,9 @@ interface GameStoreState {
   initConnection: () => void;
   clearError: () => void;
   setRulesOpen: (open: boolean) => void;
-  setAvatarOpen: (open: boolean) => void;
+  setAvatarOpen: (open: boolean, flowTarget?: AvatarFlowTarget) => void;
+  completeAvatarFlow: () => void;
+  clearCompletedAvatarFlow: () => void;
   updateAvatar: (avatar: PlayerAvatarConfig) => Promise<boolean>;
   setMutedAudio: (muted: boolean) => void;
   setVolume: (volume: number) => void;
@@ -161,6 +166,8 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     lastNarration: null,
     rulesOpen: false,
     avatarOpen: false,
+    avatarFlowTarget: null,
+    avatarCompletedTarget: null,
     myAvatar: initialAvatar,
     mutedAudio: initialAudio.muted,
     volume: initialAudio.volume,
@@ -269,8 +276,33 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       set({ rulesOpen: open });
     },
 
-    setAvatarOpen(open) {
-      set({ avatarOpen: open });
+    setAvatarOpen(open, flowTarget = null) {
+      if (open) {
+        set({
+          avatarOpen: true,
+          avatarFlowTarget: flowTarget,
+          avatarCompletedTarget: null,
+        });
+      } else {
+        set({
+          avatarOpen: false,
+          avatarFlowTarget: null,
+          avatarCompletedTarget: null,
+        });
+      }
+    },
+
+    completeAvatarFlow() {
+      const target = get().avatarFlowTarget;
+      set({
+        avatarOpen: false,
+        avatarFlowTarget: null,
+        avatarCompletedTarget: target,
+      });
+    },
+
+    clearCompletedAvatarFlow() {
+      set({ avatarCompletedTarget: null });
     },
 
     async updateAvatar(rawAvatar) {

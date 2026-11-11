@@ -30,7 +30,7 @@ interface MenuItem {
 const DEFAULT_MENU_ITEM: MenuItem = {
   id: 'create',
   label: 'Create Room',
-  description: 'Open a private 5–16 player speakeasy table and configure the night rules.',
+  description: 'Customize your avatar first, then enter your alias and open a 5–16 player table.',
 };
 
 const MENU_ITEMS: MenuItem[] = [
@@ -38,7 +38,7 @@ const MENU_ITEMS: MenuItem[] = [
   {
     id: 'join',
     label: 'Join Room',
-    description: 'Slip into an existing Midnight City table using a 6-character invite code.',
+    description: 'Customize your avatar first, then enter your alias and 6-character invite code.',
   },
   {
     id: 'avatars',
@@ -83,7 +83,9 @@ export function HomePage() {
   const rulesOpen = useGameStore((s) => s.rulesOpen);
   const setRulesOpen = useGameStore((s) => s.setRulesOpen);
   const avatarOpen = useGameStore((s) => s.avatarOpen);
+  const avatarCompletedTarget = useGameStore((s) => s.avatarCompletedTarget);
   const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
+  const clearCompletedAvatarFlow = useGameStore((s) => s.clearCompletedAvatarFlow);
   const myAvatar = useGameStore((s) => s.myAvatar);
   const connectionStatus = useGameStore((s) => s.connectionStatus);
   const mutedAudio = useGameStore((s) => s.mutedAudio);
@@ -169,15 +171,24 @@ export function HomePage() {
     setIntroRunId((n) => n + 1);
   }, []);
 
+  useEffect(() => {
+    if (avatarCompletedTarget === 'create' || avatarCompletedTarget === 'join') {
+      soundEngine.playMenuConfirm();
+      setLocalError(null);
+      setActivePanel(avatarCompletedTarget);
+      clearCompletedAvatarFlow();
+    }
+  }, [avatarCompletedTarget, clearCompletedAvatarFlow]);
+
   const activateMenuItem = useCallback(
     (itemId: MenuItem['id']) => {
       soundEngine.unlock();
       soundEngine.playMenuConfirm();
       setLocalError(null);
       if (itemId === 'create') {
-        setActivePanel('create');
+        setAvatarOpen(true, 'create');
       } else if (itemId === 'join') {
-        setActivePanel('join');
+        setAvatarOpen(true, 'join');
       } else if (itemId === 'avatars') {
         setAvatarOpen(true);
       } else if (itemId === 'rules') {
