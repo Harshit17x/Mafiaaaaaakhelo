@@ -13,16 +13,16 @@ export function DawnPage() {
   const killed = Boolean(dawn.killedPlayerId);
 
   return (
-    <div className="relative z-10 max-w-2xl mx-auto px-4 py-10">
+    <div className="relative z-10 max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
       <motion.article
         initial={{ opacity: 0, y: 24, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.55 }}
-        className="noir-card art-deco-border rounded-2xl p-6 sm:p-10 text-center space-y-6"
+        className="noir-card art-deco-border rounded-2xl p-5 sm:p-10 text-center space-y-5 sm:space-y-6"
       >
-        <div className="flex items-center justify-between border-b border-gold-500/30 pb-3 text-xs uppercase tracking-[0.28em] text-gold-400">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gold-500/30 pb-3 text-[10px] sm:text-xs uppercase tracking-[0.16em] sm:tracking-[0.28em] text-gold-400">
           <span className="inline-flex items-center gap-1.5">
-            <Newspaper className="w-4 h-4" />
+            <Newspaper className="w-4 h-4 shrink-0" />
             The Midnight Gazette
           </span>
           <span>Edition #{dawn.nightNumber}</span>
@@ -31,7 +31,7 @@ export function DawnPage() {
         <div className="flex justify-center">
           <svg
             viewBox="0 0 64 64"
-            className="w-14 h-14 text-amber-300/90"
+            className="w-12 h-12 sm:w-14 sm:h-14 text-amber-300/90"
             fill="none"
             aria-hidden="true"
           >
@@ -48,12 +48,12 @@ export function DawnPage() {
         </div>
 
         <div className="space-y-3">
-          <h1 className="font-display text-3xl sm:text-4xl font-extrabold uppercase tracking-wider text-cream-50">
+          <h1 className="font-display text-2xl sm:text-4xl font-extrabold uppercase tracking-wider text-cream-50 break-words">
             {killed
               ? `THE CITY WAKES: ${dawn.killedPlayerName} was found dead`
               : 'THE CITY WAKES: Nobody died tonight'}
           </h1>
-          <p className="font-serif italic text-lg text-cream-300">
+          <p className="font-serif italic text-base sm:text-lg text-cream-300">
             {killed
               ? 'Sirens faded before sunrise. Midnight City demands answers.'
               : 'Morning bells toll over empty alleys. Everyone survived the night.'}

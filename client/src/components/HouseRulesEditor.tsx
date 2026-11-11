@@ -174,7 +174,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
           return (
             <label
               key={toggle.key}
-              className={`flex items-center justify-between gap-3 rounded-xl bg-noir-900/65 border border-gold-500/15 px-3 py-1.5 ${
+              className={`flex items-center justify-between gap-3 rounded-xl bg-noir-900/65 border border-gold-500/15 px-3 py-2.5 sm:py-1.5 ${
                 isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-gold-400/35'
               }`}
             >
@@ -186,7 +186,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
                 onChange={(e) =>
                   onChange({ [toggle.key]: e.target.checked } as Partial<RoomSettings>)
                 }
-                className="w-4 h-4 accent-gold-500"
+                className="w-5 h-5 sm:w-4 sm:h-4 accent-gold-500 shrink-0"
               />
             </label>
           );
@@ -204,7 +204,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             onChange={(e) =>
               onChange({ healerSelfSaveRule: e.target.value as HealerSelfSaveRule })
             }
-            className="w-full rounded-xl bg-noir-950 border border-gold-500/30 px-3 py-2 text-cream-100 disabled:opacity-50"
+            className="w-full rounded-xl bg-noir-950 border border-gold-500/30 px-3 py-2 text-base sm:text-sm text-cream-100 disabled:opacity-50"
           >
             <option value="not_consecutive">Not on consecutive nights (Default)</option>
             <option value="unlimited">Unlimited</option>
@@ -220,7 +220,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
           <select
             value={settings.tieRule}
             onChange={(e) => onChange({ tieRule: e.target.value as TieRule })}
-            className="w-full rounded-xl bg-noir-950 border border-gold-500/30 px-3 py-2 text-cream-100"
+            className="w-full rounded-xl bg-noir-950 border border-gold-500/30 px-3 py-2 text-base sm:text-sm text-cream-100"
           >
             <option value="no_elimination">Nobody eliminated (Default)</option>
             <option value="revote_then_no_elimination">One revote, then nobody</option>
@@ -228,7 +228,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
         </label>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs">
         <label className="space-y-1">
           <span className="text-cream-300 font-semibold">Discussion</span>
           <select
@@ -238,7 +238,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
                 discussionTimeSec: e.target.value === 'off' ? null : Number(e.target.value),
               })
             }
-            className="w-full rounded-lg bg-noir-950 border border-gold-500/30 px-2 py-2 text-cream-100"
+            className="w-full rounded-lg bg-noir-950 border border-gold-500/30 px-2.5 py-2 text-base sm:text-xs text-cream-100"
           >
             <option value="off">Off</option>
             <option value={60}>60s</option>
@@ -258,7 +258,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
                 votingTimeSec: e.target.value === 'off' ? null : Number(e.target.value),
               })
             }
-            className="w-full rounded-lg bg-noir-950 border border-gold-500/30 px-2 py-2 text-cream-100"
+            className="w-full rounded-lg bg-noir-950 border border-gold-500/30 px-2.5 py-2 text-base sm:text-xs text-cream-100"
           >
             <option value="off">Off</option>
             <option value={30}>30s</option>
@@ -277,7 +277,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
                 nightActionTimeSec: e.target.value === 'off' ? null : Number(e.target.value),
               })
             }
-            className="w-full rounded-lg bg-noir-950 border border-gold-500/30 px-2 py-2 text-cream-100"
+            className="w-full rounded-lg bg-noir-950 border border-gold-500/30 px-2.5 py-2 text-base sm:text-xs text-cream-100"
           >
             <option value="off">Off</option>
             <option value={20}>20s</option>
@@ -298,7 +298,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             <button
               type="button"
               onClick={() => setPreviewPlayers((p) => Math.max(5, p - 1))}
-              className="w-5 h-5 rounded border border-gold-500/30 bg-noir-950 hover:bg-noir-800 text-gold-200 cursor-pointer"
+              className="w-7 h-7 sm:w-5 sm:h-5 rounded border border-gold-500/30 bg-noir-950 hover:bg-noir-800 text-gold-200 cursor-pointer"
               aria-label="Decrease preview player count"
             >
               -
@@ -307,7 +307,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             <button
               type="button"
               onClick={() => setPreviewPlayers((p) => Math.min(16, p + 1))}
-              className="w-5 h-5 rounded border border-gold-500/30 bg-noir-950 hover:bg-noir-800 text-gold-200 cursor-pointer"
+              className="w-7 h-7 sm:w-5 sm:h-5 rounded border border-gold-500/30 bg-noir-950 hover:bg-noir-800 text-gold-200 cursor-pointer"
               aria-label="Increase preview player count"
             >
               +

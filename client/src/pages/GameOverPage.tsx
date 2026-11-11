@@ -34,7 +34,7 @@ export function GameOverPage() {
         : 'border-gold-400/60 bg-gold-500/15 text-gold-200';
 
   return (
-    <div className="relative z-10 max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-hidden">
+    <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-hidden">
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
         {CONFETTI_PIECES.map((piece) => (
           <motion.div
@@ -56,12 +56,12 @@ export function GameOverPage() {
       <motion.section
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`relative z-10 noir-card border-2 rounded-2xl p-6 sm:p-8 text-center space-y-3 ${bannerStyles}`}
+        className={`relative z-10 noir-card border-2 rounded-2xl p-5 sm:p-8 text-center space-y-3 ${bannerStyles}`}
       >
         <div className="flex justify-center">
-          <Trophy className="w-12 h-12" />
+          <Trophy className="w-10 h-10 sm:w-12 sm:h-12" />
         </div>
-        <h1 className="font-display text-3xl sm:text-5xl font-extrabold uppercase tracking-wider">
+        <h1 className="font-display text-2xl sm:text-4xl md:text-5xl font-extrabold uppercase tracking-wider break-words">
           {primaryWinner === 'MAFIA'
             ? 'Syndicate Reigns Over Midnight City'
             : primaryWinner === 'JOKER'
@@ -79,18 +79,18 @@ export function GameOverPage() {
             <button
               type="button"
               onClick={() => void playAgain()}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-sm inline-flex items-center gap-2 transition"
+              className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-4 h-4 shrink-0" />
               Play Again (Return to Lobby)
             </button>
           </div>
         )}
       </motion.section>
 
-      <div className="relative z-10 grid lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 space-y-6">
-          <section className="noir-card rounded-2xl p-5 space-y-4">
+      <div className="relative z-10 grid lg:grid-cols-12 gap-4 sm:gap-6">
+        <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+          <section className="noir-card rounded-2xl p-4 sm:p-5 space-y-4">
             <h2 className="font-display text-lg text-gold-200 uppercase tracking-wider">
               Final Dossiers
             </h2>

@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { ClientPlayerView } from '@midnight-city/shared';
 import {
+  Box,
   Camera,
+  LayoutGrid,
   Maximize2,
   Minimize2,
   RotateCcw,
@@ -55,11 +57,36 @@ function computeResponsiveFov(aspect: number): number {
   if (!Number.isFinite(aspect) || aspect >= REFERENCE_MIN_ASPECT) {
     return BASE_CAMERA_FOV;
   }
-  const safeAspect = Math.max(0.55, aspect);
+  const safeAspect = Math.max(0.45, aspect);
   const baseHalfTan = Math.tan(THREE.MathUtils.degToRad(BASE_CAMERA_FOV / 2));
   const targetHorizHalfTan = baseHalfTan * REFERENCE_MIN_ASPECT;
   const verticalFov = THREE.MathUtils.radToDeg(2 * Math.atan(targetHorizHalfTan / safeAspect));
-  return Math.min(64, Math.max(BASE_CAMERA_FOV, verticalFov));
+  return Math.min(68, Math.max(BASE_CAMERA_FOV, verticalFov));
+}
+
+function getDefaultLoungeCamera(container: HTMLDivElement | null): {
+  pos: THREE.Vector3;
+  target: THREE.Vector3;
+} {
+  const w = container?.clientWidth || 1024;
+  const h = container?.clientHeight || 680;
+  const aspect = w / Math.max(1, h);
+  if (aspect < 0.85) {
+    return {
+      pos: new THREE.Vector3(0, 6.45, 11.4),
+      target: new THREE.Vector3(0, 0.9, 0),
+    };
+  }
+  if (aspect < 1.15) {
+    return {
+      pos: new THREE.Vector3(0, 5.75, 9.85),
+      target: new THREE.Vector3(0, 0.92, 0),
+    };
+  }
+  return {
+    pos: new THREE.Vector3(0, 5.25, 8.75),
+    target: new THREE.Vector3(0, 0.92, 0),
+  };
 }
 
 function createMahoganyTextures(): {
@@ -335,6 +362,7 @@ export function MidnightLoungeTable3D({
   const [webglError, setWebglError] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activePreset, setActivePreset] = useState<CameraPreset>('lounge');
+  const [viewMode, setViewMode] = useState<'3d' | 'cards'>('3d');
 
   const seatSlots = useMemo(() => {
     const minSeats = mode === 'LOBBY' ? Math.max(6, players.length) : Math.max(1, players.length);
@@ -387,15 +415,21 @@ export function MidnightLoungeTable3D({
   const applyCameraPreset = useCallback(
     (preset: CameraPreset) => {
       setActivePreset(preset);
+      const container = containerRef.current;
+      const w = container?.clientWidth || 1024;
+      const h = container?.clientHeight || 680;
+      const isPortrait = w / Math.max(1, h) < 0.85;
+
       if (preset === 'my-seat') {
         const myHandle = seatHandlesRef.current.get(myPlayerId);
         if (myHandle) {
           const outward = myHandle.seatPos.clone().normalize();
+          const dist = isPortrait ? 7.8 : 6.4;
           cameraGoalRef.current = {
             pos: new THREE.Vector3(
-              outward.x * 6.4,
-              3.25,
-              outward.z * 6.4
+              outward.x * dist,
+              isPortrait ? 3.85 : 3.25,
+              outward.z * dist
             ),
             target: new THREE.Vector3(0, 1.02, 0),
             active: true,
@@ -403,9 +437,10 @@ export function MidnightLoungeTable3D({
           return;
         }
       }
+      const loungeCam = getDefaultLoungeCamera(container);
       cameraGoalRef.current = {
-        pos: new THREE.Vector3(0, 5.25, 8.75),
-        target: new THREE.Vector3(0, 0.92, 0),
+        pos: loungeCam.pos,
+        target: loungeCam.target,
         active: true,
       };
     },
@@ -413,6 +448,7 @@ export function MidnightLoungeTable3D({
   );
 
   useEffect(() => {
+    if (webglError || viewMode === 'cards') return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -443,21 +479,22 @@ export function MidnightLoungeTable3D({
     scene.fog = new THREE.FogExp2('#06080f', 0.036);
 
     const initialAspect = width / height;
+    const initialCam = getDefaultLoungeCamera(container);
     const camera = new THREE.PerspectiveCamera(
       computeResponsiveFov(initialAspect),
       initialAspect,
       0.1,
       70
     );
-    camera.position.set(0, 5.25, 8.75);
+    camera.position.copy(initialCam.pos);
     cameraRef.current = camera;
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.055;
-    controls.target.set(0, 0.92, 0);
+    controls.target.copy(initialCam.target);
     controls.minDistance = 4.2;
-    controls.maxDistance = 12.8;
+    controls.maxDistance = 15.5;
     controls.minPolarAngle = 0.22;
     controls.maxPolarAngle = Math.PI / 2.15;
     controls.enablePan = false;
@@ -1352,19 +1389,25 @@ export function MidnightLoungeTable3D({
       cardBackTex.dispose();
       renderer.dispose();
     };
-  }, [seatKeysSignature, myPlayerId]);
+  }, [seatKeysSignature, myPlayerId, viewMode, webglError]);
+
+  const showCardsGrid = webglError || viewMode === 'cards';
 
   const stageHeightClass = isFullscreen
-    ? 'w-screen h-screen rounded-none border-0'
+    ? 'w-screen h-screen h-[100dvh] rounded-none border-0'
     : fillViewport
-      ? 'w-full min-h-[calc(100dvh-3.5rem)] h-[calc(100dvh-3.5rem)] rounded-none border-y border-gold-500/25'
+      ? 'w-full flex-1 min-h-[26rem] sm:min-h-[30rem] rounded-none border-y border-gold-500/25'
       : 'w-full h-[54dvh] min-h-[21rem] sm:h-[60dvh] sm:min-h-[26rem] lg:h-[66dvh] lg:min-h-[31rem] max-h-[48rem] rounded-2xl sm:rounded-3xl border-2 border-gold-500/35 shadow-[0_28px_70px_rgba(0,0,0,0.82)]';
 
   return (
     <div
       ref={stageWrapperRef}
       className={`relative ${
-        isFullscreen ? 'fixed inset-0 z-50 bg-[#06080f]' : fillViewport ? 'w-full' : 'space-y-3'
+        isFullscreen
+          ? 'fixed inset-0 z-50 bg-[#06080f]'
+          : fillViewport
+            ? 'w-full flex-1 flex flex-col min-h-0'
+            : 'space-y-3'
       }`}
     >
       {!fillViewport && !isFullscreen && (
@@ -1376,91 +1419,153 @@ export function MidnightLoungeTable3D({
             <span className="text-cream-400">• {centerSubtitle}</span>
           </div>
 
-          {!webglError && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => applyCameraPreset('lounge')}
-                className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
-                  activePreset === 'lounge'
-                    ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
-                    : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
-                }`}
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Lounge Angle
-              </button>
-              <button
-                type="button"
-                onClick={() => applyCameraPreset('my-seat')}
-                className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
-                  activePreset === 'my-seat'
-                    ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
-                    : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
-                }`}
-              >
-                <Camera className="w-3.5 h-3.5" />
-                My Seat
-              </button>
-              <button
-                type="button"
-                onClick={() => void toggleFullscreen()}
-                className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                Fullscreen
-              </button>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {!webglError && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setViewMode((v) => (v === '3d' ? 'cards' : '3d'))}
+                  className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {showCardsGrid ? (
+                    <>
+                      <Box className="w-3.5 h-3.5" />
+                      3D View
+                    </>
+                  ) : (
+                    <>
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      Cards View
+                    </>
+                  )}
+                </button>
+                {!showCardsGrid && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => applyCameraPreset('lounge')}
+                      className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
+                        activePreset === 'lounge'
+                          ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
+                          : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
+                      }`}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Lounge Angle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyCameraPreset('my-seat')}
+                      className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
+                        activePreset === 'my-seat'
+                          ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
+                          : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
+                      }`}
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      My Seat
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => void toggleFullscreen()}
+              className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              Fullscreen
+            </button>
+          </div>
         </div>
       )}
 
-      {webglError ? (
+      {showCardsGrid ? (
         <div
-          className={`${
-            fillViewport || isFullscreen
-              ? 'min-h-[calc(100dvh-3.5rem)] flex flex-col justify-center p-6 sm:p-10 bg-noir-950/95'
-              : 'noir-card rounded-2xl p-5 sm:p-6'
-          }`}
+          className={`flex flex-col overflow-hidden bg-noir-950/95 ${stageHeightClass}`}
         >
           {(fillViewport || isFullscreen) && (
-            <div className="max-w-6xl mx-auto w-full mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-display uppercase tracking-wider text-gold-300 font-bold text-sm">
-                  {centerTitle}
+            <div className="shrink-0 p-2.5 sm:p-4 flex flex-wrap items-start justify-between gap-2 sm:gap-3 border-b border-gold-500/15 bg-noir-950/80">
+              <div className="flex flex-col gap-1.5 max-w-full">
+                {overlayTopLeft ?? (
+                  <div className="game-hud-glass rounded-xl px-3 py-1.5">
+                    <div className="font-display text-xs sm:text-sm uppercase tracking-wider text-gold-200 font-bold">
+                      {centerTitle}
+                    </div>
+                    <div className="text-[11px] text-cream-300/80">{centerSubtitle}</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {overlayTopRight}
+                <div className="game-hud-glass rounded-xl p-1 flex items-center gap-1 text-[11px]">
+                  {!webglError && (
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('3d')}
+                      title="Switch to 3D Round Table"
+                      className="px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 text-gold-200 bg-gold-500/20 border border-gold-400/40 cursor-pointer"
+                    >
+                      <Box className="w-3.5 h-3.5" />
+                      <span>3D Table</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void toggleFullscreen()}
+                    title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                    className="px-2 py-1 rounded-lg text-gold-200 hover:bg-gold-500/20 inline-flex items-center gap-1 transition cursor-pointer"
+                  >
+                    {isFullscreen ? (
+                      <Minimize2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {isFullscreen ? 'Exit' : 'Fullscreen'}
+                    </span>
+                  </button>
                 </div>
-                <div className="text-xs text-cream-400">{centerSubtitle}</div>
               </div>
             </div>
           )}
 
-          <div className="flex flex-wrap justify-center gap-4 max-w-6xl mx-auto">
-            {seatSlots.map((slot) => {
-              const p = slot.player;
-              return (
-                <PlayerTradingCard
-                  key={slot.key}
-                  player={p}
-                  seatNumber={slot.seatNumber}
-                  mode={mode}
-                  isMe={p?.id === myPlayerId}
-                  viewerIsHost={viewerIsHost}
-                  isSpeaking={Boolean(p && speakingPeerIds.has(p.id))}
-                  accuseCount={p ? (accuseCounts.get(p.id) ?? 0) : 0}
-                  iAccused={Boolean(p && myAccuseTargetId === p.id)}
-                  isSelectedVote={Boolean(p && selectedVoteTarget === p.id)}
-                  canAccuse={canAccuse}
-                  canVote={Boolean(p && canVoteCandidate(p.id))}
-                  onToggleAccuse={() => p && onToggleAccuse?.(p.id)}
-                  onSelectVote={() => p && onSelectVote?.(p.id)}
-                  onTransferHost={() => p && onTransferHost?.(p.id)}
-                  onKickPlayer={() => p && onKickPlayer?.(p.id)}
-                />
-              );
-            })}
+          <div className="flex-1 min-h-0 overflow-y-auto px-2.5 sm:px-5 py-3 sm:py-5">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2.5 sm:gap-4 max-w-6xl mx-auto">
+              {seatSlots.map((slot) => {
+                const p = slot.player;
+                return (
+                  <PlayerTradingCard
+                    key={slot.key}
+                    player={p}
+                    seatNumber={slot.seatNumber}
+                    mode={mode}
+                    isMe={p?.id === myPlayerId}
+                    viewerIsHost={viewerIsHost}
+                    isSpeaking={Boolean(p && speakingPeerIds.has(p.id))}
+                    accuseCount={p ? (accuseCounts.get(p.id) ?? 0) : 0}
+                    iAccused={Boolean(p && myAccuseTargetId === p.id)}
+                    isSelectedVote={Boolean(p && selectedVoteTarget === p.id)}
+                    canAccuse={canAccuse}
+                    canVote={Boolean(p && canVoteCandidate(p.id))}
+                    onToggleAccuse={() => p && onToggleAccuse?.(p.id)}
+                    onSelectVote={() => p && onSelectVote?.(p.id)}
+                    onTransferHost={() => p && onTransferHost?.(p.id)}
+                    onKickPlayer={() => p && onKickPlayer?.(p.id)}
+                    fluid
+                  />
+                );
+              })}
+            </div>
           </div>
 
-          {overlayBottom && <div className="mt-6 max-w-3xl mx-auto w-full">{overlayBottom}</div>}
+          {overlayBottom && (
+            <div className="shrink-0 px-2.5 sm:px-5 pb-2.5 sm:pb-4 pt-2 border-t border-gold-500/15 bg-noir-950/85">
+              <div className="max-w-2xl mx-auto w-full">{overlayBottom}</div>
+            </div>
+          )}
         </div>
       ) : (
         <div className={`relative overflow-hidden bg-[#06080f] ${stageHeightClass}`}>
@@ -1521,10 +1626,10 @@ export function MidnightLoungeTable3D({
 
           {/* Floating Top Game HUD Bar (when fillViewport or Fullscreen) */}
           {(fillViewport || isFullscreen) && (
-            <div className="pointer-events-none absolute top-3 left-3 right-3 sm:top-4 sm:left-5 sm:right-5 z-[960] flex flex-wrap items-start justify-between gap-3">
-              <div className="pointer-events-auto flex flex-col gap-2 max-w-full">
+            <div className="pointer-events-none absolute top-2 left-2 right-2 sm:top-4 sm:left-5 sm:right-5 z-[960] flex flex-wrap items-start justify-between gap-2 sm:gap-3">
+              <div className="pointer-events-auto flex flex-col gap-1.5 sm:gap-2 max-w-full">
                 {overlayTopLeft ?? (
-                  <div className="game-hud-glass rounded-xl px-3.5 py-2">
+                  <div className="game-hud-glass rounded-xl px-3 sm:px-3.5 py-1.5 sm:py-2">
                     <div className="font-display text-xs sm:text-sm uppercase tracking-wider text-gold-200 font-bold">
                       {centerTitle}
                     </div>
@@ -1536,7 +1641,19 @@ export function MidnightLoungeTable3D({
               <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-1.5">
                 {overlayTopRight}
 
-                <div className="game-hud-glass rounded-xl p-1 flex items-center gap-1 text-[11px]">
+                <div className="game-hud-glass rounded-xl p-1 flex items-center gap-0.5 sm:gap-1 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('cards')}
+                    title="Switch to Cards Grid View"
+                    className="px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 text-gold-200 hover:bg-gold-500/20 transition cursor-pointer"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Cards</span>
+                  </button>
+
+                  <span className="w-px h-4 bg-gold-500/25 mx-0.5" aria-hidden="true" />
+
                   <button
                     type="button"
                     onClick={() => applyCameraPreset('lounge')}
@@ -1587,7 +1704,7 @@ export function MidnightLoungeTable3D({
           )}
 
           {/* Floating Bottom Dock / Controls inside 3D Viewport */}
-          <div className="pointer-events-none absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-5 sm:right-5 z-[960] flex flex-col items-center gap-2">
+          <div className="pointer-events-none absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-5 sm:right-5 z-[960] flex flex-col items-center gap-1.5 sm:gap-2">
             {overlayBottom && (
               <div className="pointer-events-auto w-full max-w-2xl">{overlayBottom}</div>
             )}

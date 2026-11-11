@@ -69,7 +69,7 @@ export function LobbyCharacterSvg({
     >
       {/* Floating Name + Status Tag */}
       <div
-        className={`mb-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.8)] border whitespace-nowrap max-w-[8.5rem] transition ${
+        className={`mb-0.5 inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-px sm:py-0.5 rounded-full text-[8.5px] sm:text-[11px] font-semibold leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.8)] border whitespace-nowrap max-w-[5.2rem] sm:max-w-[8.5rem] transition ${
           selected
             ? 'bg-gold-500/25 border-gold-300 text-gold-100'
             : player.isReady
@@ -80,28 +80,28 @@ export function LobbyCharacterSvg({
         }`}
       >
         {player.isHost && (
-          <Crown className="w-2.5 h-2.5 text-gold-300 shrink-0" aria-hidden="true" />
+          <Crown className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-gold-300 shrink-0" aria-hidden="true" />
         )}
         <span className="truncate">{player.name}</span>
         {!player.isPlaying ? (
-          <span className="text-[8px] font-mono uppercase px-1 rounded bg-purple-900/80 text-purple-200 shrink-0">
+          <span className="text-[7px] sm:text-[8px] font-mono uppercase px-1 rounded bg-purple-900/80 text-purple-200 shrink-0">
             GM
           </span>
         ) : player.isReady ? (
-          <Check className="w-3 h-3 text-emerald-300 shrink-0" aria-hidden="true" />
+          <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-300 shrink-0" aria-hidden="true" />
         ) : null}
         {isSpeaking && (
-          <Mic className="w-2.5 h-2.5 text-emerald-300 animate-pulse shrink-0" aria-hidden="true" />
+          <Mic className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-emerald-300 animate-pulse shrink-0" aria-hidden="true" />
         )}
         {isOffline && (
-          <WifiOff className="w-2.5 h-2.5 text-amber-400 shrink-0" aria-hidden="true" />
+          <WifiOff className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-amber-400 shrink-0" aria-hidden="true" />
         )}
       </div>
 
       {/* Small Among-Us-Inspired SVG Noir Character with Avatar Portrait */}
       <svg
         viewBox="0 0 64 84"
-        className="w-12 h-16 sm:w-14 sm:h-[4.5rem] overflow-visible drop-shadow-[0_6px_10px_rgba(0,0,0,0.72)] transition-transform duration-150 group-hover:scale-105"
+        className="w-8 h-11 sm:w-12 sm:h-16 md:w-14 md:h-[4.5rem] overflow-visible drop-shadow-[0_6px_10px_rgba(0,0,0,0.72)] transition-transform duration-150 group-hover:scale-105"
         aria-hidden="true"
       >
         <defs>

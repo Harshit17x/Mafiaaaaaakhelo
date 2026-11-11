@@ -24,8 +24,8 @@ export function LivePlayersBadge({ variant = 'title' }: LivePlayersBadgeProps) {
 
   const containerClasses =
     variant === 'title'
-      ? 'inline-flex items-center gap-2 sm:gap-2.5 rounded-full bg-black/45 backdrop-blur-md border border-cream-100/15 px-3 sm:px-3.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)]'
-      : 'inline-flex items-center gap-2 rounded-full bg-noir-900/85 border border-gold-500/30 px-2.5 sm:px-3 py-1';
+      ? 'inline-flex items-center gap-2 sm:gap-2.5 rounded-full bg-black/45 backdrop-blur-md border border-cream-100/15 px-2.5 sm:px-3.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)] shrink-0'
+      : 'inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-noir-900/85 border border-gold-500/30 px-2 sm:px-3 py-1 shrink-0';
 
   return (
     <div
@@ -54,7 +54,7 @@ export function LivePlayersBadge({ variant = 'title' }: LivePlayersBadgeProps) {
       />
 
       {isSynced ? (
-        <div className="flex items-center gap-1.5 font-condensed uppercase tracking-[0.12em] text-[11px] sm:text-xs leading-none">
+        <div className="flex items-center gap-1 sm:gap-1.5 font-condensed uppercase tracking-[0.12em] text-[11px] sm:text-xs leading-none">
           <span className="hidden sm:inline text-emerald-300/90 font-semibold">Live</span>
           <span
             key={playingCount}
@@ -62,7 +62,13 @@ export function LivePlayersBadge({ variant = 'title' }: LivePlayersBadgeProps) {
           >
             {playingCount}
           </span>
-          <span className="text-cream-100/85">Playing</span>
+          <span
+            className={
+              variant === 'header' ? 'hidden sm:inline text-cream-100/85' : 'text-cream-100/85'
+            }
+          >
+            Playing
+          </span>
 
           {inMatchCount > 0 && (
             <span className="hidden md:inline-flex items-center gap-1 text-amber-300/90">

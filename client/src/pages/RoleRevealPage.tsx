@@ -42,12 +42,12 @@ export function RoleRevealPage() {
   const acknowledged = room.game.myRoleAcknowledged;
 
   return (
-    <div className="relative z-10 max-w-xl mx-auto px-4 py-8 flex flex-col items-center space-y-6">
+    <div className="relative z-10 max-w-xl mx-auto px-3 sm:px-4 py-5 sm:py-8 flex flex-col items-center space-y-4 sm:space-y-6">
       <div className="text-center space-y-1">
-        <div className="text-xs uppercase tracking-[0.28em] text-gold-400">
+        <div className="text-[11px] sm:text-xs uppercase tracking-[0.24em] sm:tracking-[0.28em] text-gold-400">
           Confidential Briefing
         </div>
-        <h2 className="font-display text-2xl sm:text-3xl text-gold-200 uppercase tracking-wider">
+        <h2 className="font-display text-xl sm:text-3xl text-gold-200 uppercase tracking-wider">
           Your Secret Identity
         </h2>
       </div>
@@ -64,7 +64,7 @@ export function RoleRevealPage() {
         }}
       />
 
-      <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+      <div className="flex flex-col items-center gap-2.5 sm:gap-3 w-full max-w-xs">
         {!acknowledged ? (
           <>
             <button
@@ -77,13 +77,16 @@ export function RoleRevealPage() {
             </button>
             {!hasPeeked && (
               <p className="text-xs text-cream-400 text-center">
-                Hold the card above (or hold Space/Enter) to read your dossier first.
+                <span className="sm:hidden">Touch and hold the card above to read your dossier first.</span>
+                <span className="hidden sm:inline">
+                  Hold the card above (or hold Space/Enter) to read your dossier first.
+                </span>
               </p>
             )}
           </>
         ) : (
-          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 text-sm">
-            <CheckCircle2 className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-200 text-xs sm:text-sm text-center">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             Waiting for other citizens ({ackCount}/{playingPlayers.length})
           </div>
         )}

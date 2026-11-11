@@ -60,20 +60,20 @@ export function LobbyPage({
         : null;
 
   return (
-    <div className="relative z-10 max-w-6xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-5">
-      <div className="noir-card rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-6 space-y-3.5 sm:space-y-5">
+      <div className="noir-card rounded-2xl p-3.5 sm:p-5 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.25em] text-gold-400">
+          <div className="text-[10.5px] sm:text-[11px] uppercase tracking-[0.22em] sm:tracking-[0.25em] text-gold-400">
             Speakeasy Cushion Lounge
           </div>
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-1">
-            <span className="font-mono text-2xl sm:text-3xl font-bold tracking-[0.25em] text-gold-200">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+            <span className="font-mono text-xl sm:text-3xl font-bold tracking-[0.22em] sm:tracking-[0.25em] text-gold-200">
               {room.roomCode}
             </span>
             <button
               type="button"
               onClick={handleCopyInvite}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-500/40 bg-noir-800 hover:bg-noir-700 text-xs font-semibold text-gold-200 transition"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-gold-500/40 bg-noir-800 hover:bg-noir-700 text-xs font-semibold text-gold-200 transition"
             >
               {copied ? (
                 <>
@@ -90,13 +90,13 @@ export function LobbyPage({
           </div>
         </div>
 
-        <div className="flex flex-col items-start sm:items-end gap-1.5 w-full lg:w-auto">
+        <div className="flex flex-col items-stretch sm:items-end gap-1.5 w-full lg:w-auto">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {isHost && (
               <button
                 type="button"
                 onClick={() => void toggleLock(!room.locked)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold uppercase tracking-wider transition ${
+                className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold uppercase tracking-wider transition ${
                   room.locked
                     ? 'border-crimson-500/60 bg-crimson-900/60 text-crimson-200'
                     : 'border-gold-500/40 bg-noir-800 text-cream-200 hover:bg-noir-700'
@@ -111,7 +111,7 @@ export function LobbyPage({
               <button
                 type="button"
                 onClick={() => void setReady(!me.isReady)}
-                className={`px-5 py-2.5 rounded-xl font-display font-bold uppercase tracking-wider text-sm transition ${
+                className={`flex-1 sm:flex-initial px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-display font-bold uppercase tracking-wider text-xs sm:text-sm transition ${
                   me.isReady
                     ? 'bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-400/50'
                     : 'bg-noir-800 hover:bg-noir-700 text-gold-200 border border-gold-500/50'
@@ -126,7 +126,7 @@ export function LobbyPage({
                 type="button"
                 disabled={!canStart}
                 onClick={() => void startGame()}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-sm inline-flex items-center gap-2 disabled:opacity-40 transition"
+                className="flex-1 sm:flex-initial px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-xs sm:text-sm inline-flex items-center justify-center gap-2 disabled:opacity-40 transition"
               >
                 <Play className="w-4 h-4" />
                 Deal Roles
@@ -139,7 +139,7 @@ export function LobbyPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_19.5rem] xl:grid-cols-[minmax(0,1fr)_21.5rem] gap-4 sm:gap-5 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_19.5rem] xl:grid-cols-[minmax(0,1fr)_21.5rem] gap-3.5 sm:gap-5 items-stretch">
         <div className="min-w-0">
           <LobbyWaitingLounge
             players={room.players}
@@ -164,7 +164,7 @@ export function LobbyPage({
           className="min-w-0 lg:relative lg:min-h-[26rem]"
         >
           <div className="lg:absolute lg:inset-0 flex flex-col">
-            <ChatPanel className="h-80 sm:h-96 lg:h-full" />
+            <ChatPanel className="h-72 sm:h-96 lg:h-full" />
           </div>
         </aside>
       </div>

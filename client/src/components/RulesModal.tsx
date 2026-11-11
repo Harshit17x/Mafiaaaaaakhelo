@@ -27,16 +27,16 @@ export function RulesModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-noir-950/85 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-noir-950/85 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="rules-modal-title"
     >
-      <div className="noir-card art-deco-border rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 space-y-5">
-        <div className="flex items-center justify-between border-b border-gold-500/25 pb-3">
+      <div className="noir-card art-deco-border rounded-2xl max-w-2xl w-full max-h-[88dvh] overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
+        <div className="flex items-center justify-between gap-2 border-b border-gold-500/25 pb-3">
           <h2
             id="rules-modal-title"
-            className="font-display text-2xl text-gold-200 tracking-wider uppercase"
+            className="font-display text-lg sm:text-2xl text-gold-200 tracking-wider uppercase"
           >
             Midnight City Dossier — Rules
           </h2>

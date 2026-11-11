@@ -1,9 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatChannel } from '@midnight-city/shared';
-import { MessageSquare, Send, Shield, Skull } from 'lucide-react';
+import { MessageSquare, Send, Shield, Skull, X } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 
-export function ChatPanel({ className = 'h-80 lg:h-[26rem]' }: { className?: string }) {
+export function ChatPanel({
+  className = 'h-80 lg:h-[26rem]',
+  onClose,
+}: {
+  className?: string;
+  onClose?: () => void;
+}) {
   const room = useGameStore((s) => s.room);
   const chatMessages = useGameStore((s) => s.chatMessages);
   const sendChat = useGameStore((s) => s.sendChat);
@@ -120,31 +126,43 @@ export function ChatPanel({ className = 'h-80 lg:h-[26rem]' }: { className?: str
       className={`noir-card rounded-xl flex flex-col overflow-hidden ${className}`}
       aria-label="Text chat panel"
     >
-      <div className="flex items-center border-b border-gold-500/20 bg-noir-900/70 px-2 pt-2 gap-1 shrink-0">
-        {availableChannels.map((ch) => {
-          const selected = activeChannel === ch;
-          return (
-            <button
-              key={ch}
-              type="button"
-              onClick={() => setActiveChannel(ch)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-t-lg text-xs font-semibold tracking-wider uppercase transition-colors ${
-                selected
-                  ? ch === 'MAFIA'
-                    ? 'bg-crimson-900/70 text-crimson-200 border-t border-x border-crimson-500/50'
-                    : ch === 'GHOST'
-                      ? 'bg-purple-950/70 text-purple-200 border-t border-x border-purple-500/50'
-                      : 'bg-noir-800 text-gold-200 border-t border-x border-gold-500/40'
-                  : 'text-cream-400 hover:text-cream-100'
-              }`}
-            >
-              {ch === 'PUBLIC' && <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />}
-              {ch === 'MAFIA' && <Shield className="w-3.5 h-3.5" aria-hidden="true" />}
-              {ch === 'GHOST' && <Skull className="w-3.5 h-3.5" aria-hidden="true" />}
-              {ch === 'PUBLIC' ? 'City' : ch === 'MAFIA' ? 'Syndicate' : 'Ghost'}
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-between border-b border-gold-500/20 bg-noir-900/70 px-2 pt-2 gap-1 shrink-0">
+        <div className="flex items-center gap-1 overflow-x-auto min-w-0">
+          {availableChannels.map((ch) => {
+            const selected = activeChannel === ch;
+            return (
+              <button
+                key={ch}
+                type="button"
+                onClick={() => setActiveChannel(ch)}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-t-lg text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-colors ${
+                  selected
+                    ? ch === 'MAFIA'
+                      ? 'bg-crimson-900/70 text-crimson-200 border-t border-x border-crimson-500/50'
+                      : ch === 'GHOST'
+                        ? 'bg-purple-950/70 text-purple-200 border-t border-x border-purple-500/50'
+                        : 'bg-noir-800 text-gold-200 border-t border-x border-gold-500/40'
+                    : 'text-cream-400 hover:text-cream-100'
+                }`}
+              >
+                {ch === 'PUBLIC' && <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />}
+                {ch === 'MAFIA' && <Shield className="w-3.5 h-3.5" aria-hidden="true" />}
+                {ch === 'GHOST' && <Skull className="w-3.5 h-3.5" aria-hidden="true" />}
+                {ch === 'PUBLIC' ? 'City' : ch === 'MAFIA' ? 'Syndicate' : 'Ghost'}
+              </button>
+            );
+          })}
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close chat drawer"
+            className="mb-1 shrink-0 p-1.5 rounded-lg bg-noir-950/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div
@@ -200,7 +218,7 @@ export function ChatPanel({ className = 'h-80 lg:h-[26rem]' }: { className?: str
                 : 'Read-only right now'
           }
           aria-label="Chat message input"
-          className="flex-1 min-w-0 bg-noir-900 border border-gold-500/25 rounded-lg px-3 py-1.5 text-sm text-cream-100 placeholder:text-cream-600 disabled:opacity-50"
+          className="flex-1 min-w-0 bg-noir-900 border border-gold-500/25 rounded-lg px-3 py-1.5 text-base sm:text-sm text-cream-100 placeholder:text-cream-600 disabled:opacity-50"
         />
         <button
           type="submit"

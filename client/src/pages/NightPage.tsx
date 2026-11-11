@@ -31,17 +31,17 @@ export function NightPage({
   const isHumanNarrator = Boolean(me && !me.isPlaying);
 
   return (
-    <div className="relative z-10 max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-noir-900/90 border border-gold-500/35">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-noir-900/90 border border-gold-500/35 shrink-0">
             <Moon className="w-5 h-5 text-gold-300" aria-hidden="true" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.25em] text-gold-400">
               Night {roundNumber}
             </div>
-            <h2 className="font-display text-xl sm:text-2xl text-cream-100 uppercase tracking-wider">
+            <h2 className="font-display text-lg sm:text-2xl text-cream-100 uppercase tracking-wider leading-tight">
               {night.canAct || isHumanNarrator ? night.narrationText : 'The City Sleeps'}
             </h2>
           </div>
@@ -51,11 +51,11 @@ export function NightPage({
         )}
       </div>
 
-      <div className="grid lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 space-y-5">
+      <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
+        <div className="lg:col-span-7 space-y-4 sm:space-y-5">
           {isHumanNarrator ? (
-            <div className="noir-card art-deco-border rounded-2xl p-8 text-center space-y-3">
-              <h3 className="font-display text-xl text-gold-200 uppercase tracking-wider">
+            <div className="noir-card art-deco-border rounded-2xl p-6 sm:p-8 text-center space-y-3">
+              <h3 className="font-display text-lg sm:text-xl text-gold-200 uppercase tracking-wider">
                 Narrator Directing Night {roundNumber}
               </h3>
               <p className="text-sm text-cream-300">
@@ -64,7 +64,7 @@ export function NightPage({
               </p>
             </div>
           ) : !night.canAct ? (
-            <div className="noir-card art-deco-border rounded-2xl p-8 sm:p-12 text-center space-y-4">
+            <div className="noir-card art-deco-border rounded-2xl p-6 sm:p-12 text-center space-y-4">
               <div className="w-16 h-16 mx-auto rounded-full bg-noir-950 border border-gold-500/30 flex items-center justify-center">
                 <Moon className="w-8 h-8 text-gold-300/80 animate-pulse" />
               </div>
@@ -100,8 +100,8 @@ export function NightPage({
               )}
             </div>
           ) : night.subPhase === 'MAFIA_TURN' ? (
-            <div className="noir-card border-2 border-crimson-500/50 rounded-2xl p-5 sm:p-6 space-y-4">
-              <div className="flex items-center justify-between gap-2">
+            <div className="noir-card border-2 border-crimson-500/50 rounded-2xl p-4 sm:p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-crimson-300 font-display text-lg uppercase">
                   <Skull className="w-5 h-5" />
                   Syndicate Strike
@@ -172,9 +172,9 @@ export function NightPage({
                                 : 'bg-noir-900/80 border-gold-500/20 hover:border-crimson-400/50 text-cream-100'
                             }`}
                           >
-                            <span className="font-medium text-sm">{target.name}</span>
+                            <span className="font-medium text-sm truncate min-w-0">{target.name}</span>
                             {votersForTarget.length > 0 && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-crimson-950 text-crimson-200 border border-crimson-500/40">
+                              <span className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-crimson-950 text-crimson-200 border border-crimson-500/40">
                                 {votersForTarget.join(', ')}
                               </span>
                             )}
@@ -186,7 +186,7 @@ export function NightPage({
               )}
             </div>
           ) : night.subPhase === 'HEALER_TURN' ? (
-            <div className="noir-card border-2 border-emerald-500/45 rounded-2xl p-5 sm:p-6 space-y-4">
+            <div className="noir-card border-2 border-emerald-500/45 rounded-2xl p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 text-emerald-300 font-display text-lg uppercase">
                 <Shield className="w-5 h-5" />
                 Protect a Soul
@@ -216,10 +216,10 @@ export function NightPage({
                           : 'bg-noir-900/80 border-gold-500/20 hover:border-emerald-400/50 text-cream-100 disabled:opacity-40'
                       }`}
                     >
-                      <span className="font-medium text-sm">
+                      <span className="font-medium text-sm truncate min-w-0">
                         {target.name} {isSelf ? '(Yourself)' : ''}
                       </span>
-                      {selected && <Check className="w-4 h-4 text-emerald-400" />}
+                      {selected && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
                     </button>
                   );
                 })}
@@ -231,7 +231,7 @@ export function NightPage({
               )}
             </div>
           ) : night.subPhase === 'DETECTIVE_TURN' ? (
-            <div className="noir-card border-2 border-sky-500/45 rounded-2xl p-5 sm:p-6 space-y-4">
+            <div className="noir-card border-2 border-sky-500/45 rounded-2xl p-4 sm:p-6 space-y-4">
               <div className="flex items-center gap-2 text-sky-300 font-display text-lg uppercase">
                 <Search className="w-5 h-5" />
                 Private Investigation
@@ -257,8 +257,8 @@ export function NightPage({
                             : 'bg-noir-900/80 border-gold-500/20 hover:border-sky-400/50 text-cream-100 disabled:opacity-40'
                         }`}
                       >
-                        <span className="font-medium text-sm">{target.name}</span>
-                        {selected && <Check className="w-4 h-4 text-sky-300" />}
+                        <span className="font-medium text-sm truncate min-w-0">{target.name}</span>
+                        {selected && <Check className="w-4 h-4 text-sky-300 shrink-0" />}
                       </button>
                     );
                   })}
@@ -288,7 +288,7 @@ export function NightPage({
 
         <div className="lg:col-span-5">
           {canUseNightChat ? (
-            <ChatPanel />
+            <ChatPanel className="h-72 sm:h-80 lg:h-[26rem]" />
           ) : (
             <div className="noir-card rounded-2xl p-6 text-center text-xs text-cream-400 space-y-2">
               <div className="font-display uppercase tracking-wider text-gold-300 text-sm">

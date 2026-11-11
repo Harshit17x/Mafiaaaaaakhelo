@@ -31,6 +31,8 @@ export function RolePeekChip() {
         onPointerUp={() => setPeeking(false)}
         onPointerLeave={() => setPeeking(false)}
         onPointerCancel={() => setPeeking(false)}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ WebkitTouchCallout: 'none' }}
         onKeyDown={(e) => {
           if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
@@ -39,14 +41,14 @@ export function RolePeekChip() {
         }}
         onKeyUp={() => setPeeking(false)}
         aria-label="Hold to peek at your secret role"
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gold-500/40 bg-noir-900/90 hover:bg-noir-800 text-xs font-semibold text-gold-200 select-none touch-none"
+        className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-lg border border-gold-500/40 bg-noir-900/90 hover:bg-noir-800 text-xs font-semibold text-gold-200 select-none touch-none"
       >
-        <Eye className="w-3.5 h-3.5 text-gold-300" />
+        <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-gold-300" />
         <span className="hidden sm:inline">Hold: My Role</span>
       </button>
 
       {peeking && (
-        <div className="absolute right-0 top-11 z-50 w-64 noir-card border-2 border-gold-400/70 rounded-xl p-3.5 shadow-2xl space-y-2">
+        <div className="fixed inset-x-3 top-16 sm:inset-x-auto sm:absolute sm:right-0 sm:top-11 z-[980] sm:w-64 noir-card border-2 border-gold-400/70 rounded-xl p-3.5 shadow-2xl space-y-2">
           <div className="flex items-center gap-2.5">
             <RoleSvgIcon role={role} className={`w-8 h-8 ${meta.colorClass}`} />
             <div>

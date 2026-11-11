@@ -9,7 +9,19 @@
     color: #ece4d4;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent automatic viewport zoom on mobile Safari when focusing <16px inputs */
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 
   button:focus-visible,

@@ -72,6 +72,8 @@ export function App() {
   }, [mutedAudio, volume]);
 
   const phase = room ? room.game.phase : 'HOME';
+  const isDayTablePhase =
+    phase === 'DAY_DISCUSSION' || phase === 'DAY_VOTE' || phase === 'VOTE_RESULT';
 
   useEffect(() => {
     if (!room) {
@@ -119,30 +121,34 @@ export function App() {
   }, [lastNarration, room?.settings.narratorMode]);
 
   return (
-    <div className="relative min-h-screen flex flex-col">
+    <div className="relative min-h-screen min-h-[100dvh] flex flex-col overflow-x-clip">
       {room && <Atmosphere phase={phase} />}
 
       {room && (
         <header className="relative z-20 border-b border-gold-500/20 bg-noir-950/75 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <span className="font-display font-bold tracking-[0.2em] text-gold-200 text-sm sm:text-base truncate">
+          <div className="max-w-6xl mx-auto px-2.5 sm:px-4 h-14 flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="font-display font-bold tracking-[0.12em] sm:tracking-[0.2em] text-gold-200 text-xs sm:text-base truncate">
                 MIDNIGHT CITY
               </span>
-              <span className="hidden sm:inline-block font-mono text-xs px-2 py-0.5 rounded bg-noir-800 border border-gold-500/30 text-gold-300">
+              <span className="hidden sm:inline-block font-mono text-xs px-2 py-0.5 rounded bg-noir-800 border border-gold-500/30 text-gold-300 shrink-0">
                 #{room.roomCode}
               </span>
               <LivePlayersBadge variant="header" />
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
               {connectionStatus !== 'connected' && (
                 <span
                   role="status"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs"
+                  aria-label={connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+                  title={connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+                  className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs"
                 >
                   <WifiOff className="w-3.5 h-3.5 animate-pulse" />
-                  {connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+                  <span className="hidden sm:inline">
+                    {connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+                  </span>
                 </span>
               )}
 
@@ -152,7 +158,8 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setRulesOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
+                aria-label="Open Rules"
+                className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
               >
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Rules</span>
@@ -161,7 +168,8 @@ export function App() {
               <button
                 type="button"
                 onClick={() => void leaveRoom()}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-crimson-300 hover:text-crimson-200 hover:bg-crimson-900/40"
+                aria-label="Leave Room"
+                className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-crimson-300 hover:text-crimson-200 hover:bg-crimson-900/40"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Leave</span>
@@ -176,16 +184,16 @@ export function App() {
           role="alert"
           className={
             room
-              ? 'relative z-30 max-w-2xl mx-auto mt-4 px-4 w-full'
-              : 'fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-xl px-4 w-full'
+              ? 'relative z-30 max-w-2xl mx-auto mt-3 sm:mt-4 px-3 sm:px-4 w-full'
+              : 'fixed top-4 sm:top-5 left-1/2 -translate-x-1/2 z-50 max-w-xl px-3 sm:px-4 w-full'
           }
         >
-          <div className="rounded-xl bg-crimson-900/95 backdrop-blur-md border border-crimson-400/70 px-4 py-3 flex items-center justify-between gap-3 text-sm text-crimson-100 shadow-2xl">
-            <span>{kickedReason ?? errorBanner}</span>
+          <div className="rounded-xl bg-crimson-900/95 backdrop-blur-md border border-crimson-400/70 px-3.5 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-3 text-xs sm:text-sm text-crimson-100 shadow-2xl">
+            <span className="min-w-0 break-words">{kickedReason ?? errorBanner}</span>
             <button
               type="button"
               onClick={clearError}
-              className="text-xs uppercase font-bold tracking-wider px-2 py-1 rounded bg-noir-950/50 hover:bg-noir-950"
+              className="shrink-0 text-xs uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-noir-950/50 hover:bg-noir-950"
             >
               Dismiss
             </button>
@@ -194,7 +202,7 @@ export function App() {
       )}
 
       {isRestoringSession && !room ? (
-        <div className="relative z-10 min-h-screen flex items-center px-6 sm:px-12 md:px-16 lg:px-24 bg-[#050404] overflow-hidden">
+        <div className="relative z-10 min-h-screen min-h-[100dvh] flex items-center px-5 sm:px-12 md:px-16 lg:px-24 bg-[#050404] overflow-hidden">
           <div
             aria-hidden="true"
             className="pointer-events-none fixed right-[-10vw] sm:right-[3vw] lg:right-[5vw] xl:right-[7vw] top-[8vh] sm:top-[6.5vh] h-[76vh] sm:h-[82vh] aspect-[760/1000] opacity-35"
@@ -209,7 +217,7 @@ export function App() {
                 'linear-gradient(90deg, rgba(5,4,4,0.95) 0%, rgba(5,4,4,0.82) 38%, rgba(5,4,4,0.5) 100%)',
             }}
           />
-          <div className="relative z-10 max-w-[380px] space-y-6">
+          <div className="relative z-10 max-w-[380px] w-full space-y-6">
             <MafiaTitleLogo compact />
             <div className="space-y-2.5">
               <div className="flex items-center gap-2.5 font-condensed uppercase tracking-[0.16em] text-sm text-amber-300">
@@ -226,23 +234,23 @@ export function App() {
       ) : !room ? (
         <HomePage />
       ) : (
-        <div className="relative z-10 flex-1">
+        <div className="relative z-10 flex-1 flex flex-col min-h-0">
           <VoiceControlsBar onSpeakingChange={handleSpeakingChange} />
           {lastNarration &&
             room.settings.narratorMode === 'AUTO_NARRATOR' &&
             room.game.phase !== 'LOBBY' && (
-              <div className="max-w-6xl mx-auto px-4 pt-2">
+              <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 pt-2">
                 <div
                   aria-live="polite"
-                  className="rounded-xl bg-noir-900/75 border border-gold-500/20 px-4 py-2 text-xs text-gold-200/90 flex items-center gap-2"
+                  className="rounded-xl bg-noir-900/75 border border-gold-500/20 px-3 sm:px-4 py-1.5 sm:py-2 text-xs text-gold-200/90 flex items-center gap-2"
                 >
                   <Radio className="w-3.5 h-3.5 text-gold-400 shrink-0" aria-hidden="true" />
-                  <span className="font-serif italic text-sm">{lastNarration.text}</span>
+                  <span className="font-serif italic text-xs sm:text-sm">{lastNarration.text}</span>
                 </div>
               </div>
             )}
           {room.game.godView && (
-            <div className="max-w-6xl mx-auto px-4 pt-4">
+            <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-4">
               <GodViewPanel />
             </div>
           )}
@@ -254,6 +262,7 @@ export function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
+              className={isDayTablePhase ? 'flex-1 flex flex-col min-h-0' : undefined}
             >
               {room.game.phase === 'LOBBY' && (
                 <LobbyPage speakingPeerIds={effectiveSpeakingPeerIds} />
@@ -263,9 +272,7 @@ export function App() {
                 <NightPage speakingPeerIds={effectiveSpeakingPeerIds} />
               )}
               {room.game.phase === 'DAWN' && <DawnPage />}
-              {(room.game.phase === 'DAY_DISCUSSION' ||
-                room.game.phase === 'DAY_VOTE' ||
-                room.game.phase === 'VOTE_RESULT') && (
+              {isDayTablePhase && (
                 <DayTablePage speakingPeerIds={effectiveSpeakingPeerIds} />
               )}
               {room.game.phase === 'GAME_OVER' && <GameOverPage />}

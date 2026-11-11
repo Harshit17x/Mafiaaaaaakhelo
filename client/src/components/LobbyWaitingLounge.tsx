@@ -477,6 +477,72 @@ export function LobbyWaitingLounge({
     ? players.find((p) => p.id === selectedPlayerId) ?? null
     : null;
 
+  const renderTouchPadGrid = (compactSize: boolean) => (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className={
+        compactSize
+          ? 'grid grid-cols-3 gap-1 w-[5.5rem] h-[5.5rem] shrink-0'
+          : 'hidden sm:grid lg:hidden absolute bottom-2.5 left-2.5 z-[680] grid-cols-3 gap-1 w-24 h-24 opacity-85'
+      }
+      aria-label="Touch movement pad"
+    >
+      <div />
+      <button
+        type="button"
+        aria-label="Move up"
+        onPointerDown={() => setTouchPad(0, -1)}
+        onPointerUp={() => setTouchPad(0, 0)}
+        onPointerLeave={() => setTouchPad(0, 0)}
+        onPointerCancel={() => setTouchPad(0, 0)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
+      >
+        <ArrowUp className="w-3.5 h-3.5" />
+      </button>
+      <div />
+      <button
+        type="button"
+        aria-label="Move left"
+        onPointerDown={() => setTouchPad(-1, 0)}
+        onPointerUp={() => setTouchPad(0, 0)}
+        onPointerLeave={() => setTouchPad(0, 0)}
+        onPointerCancel={() => setTouchPad(0, 0)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+      </button>
+      <div className="rounded-lg bg-noir-950/50 border border-gold-500/15" />
+      <button
+        type="button"
+        aria-label="Move right"
+        onPointerDown={() => setTouchPad(1, 0)}
+        onPointerUp={() => setTouchPad(0, 0)}
+        onPointerLeave={() => setTouchPad(0, 0)}
+        onPointerCancel={() => setTouchPad(0, 0)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
+      >
+        <ArrowRight className="w-3.5 h-3.5" />
+      </button>
+      <div />
+      <button
+        type="button"
+        aria-label="Move down"
+        onPointerDown={() => setTouchPad(0, 1)}
+        onPointerUp={() => setTouchPad(0, 0)}
+        onPointerLeave={() => setTouchPad(0, 0)}
+        onPointerCancel={() => setTouchPad(0, 0)}
+        onContextMenu={(e) => e.preventDefault()}
+        className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
+      >
+        <ArrowDown className="w-3.5 h-3.5" />
+      </button>
+      <div />
+    </div>
+  );
+
   return (
     <div className="space-y-2.5">
       {/* Lounge Header Strip */}
@@ -505,7 +571,7 @@ export function LobbyWaitingLounge({
         onClick={handleFloorClick}
         role="region"
         aria-label="Interactive Lobby Waiting Area Lounge"
-        className="relative w-full aspect-[5/3] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-gold-500/35 bg-[#080c16] shadow-[0_24px_60px_rgba(0,0,0,0.8)] select-none cursor-crosshair"
+        className="relative w-full aspect-[5/3] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-gold-500/35 bg-[#080c16] shadow-[0_24px_60px_rgba(0,0,0,0.8)] select-none cursor-crosshair touch-manipulation"
       >
         {/* Speakeasy Lounge Room Vector Artwork */}
         <svg
@@ -667,21 +733,22 @@ export function LobbyWaitingLounge({
             onOpenCustomization();
           }}
           style={{
-            left: '83.8%',
+            left: '82.5%',
             top: '27.5%',
           }}
-          className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1 px-2.5 py-1 rounded-xl border transition cursor-pointer ${
+          className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-0.5 sm:gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl border transition cursor-pointer ${
             nearCustomize
               ? 'bg-gold-500 text-noir-950 border-cream-50 shadow-[0_0_24px_rgba(245,208,116,0.75)] scale-105'
               : 'bg-noir-950/85 hover:bg-noir-900 text-gold-200 border-gold-400/55 shadow-lg'
           }`}
         >
           <span className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] font-display font-bold uppercase tracking-wider whitespace-nowrap">
-            <Sparkles className="w-3 h-3 shrink-0" />
-            Customization Area
+            <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+            <span className="sm:hidden">Customize</span>
+            <span className="hidden sm:inline">Customization Area</span>
           </span>
           <span
-            className={`text-[8px] sm:text-[9.5px] font-mono whitespace-nowrap ${
+            className={`hidden sm:inline text-[9.5px] font-mono whitespace-nowrap ${
               nearCustomize ? 'text-noir-950 font-bold' : 'text-cream-300/85'
             }`}
           >
@@ -742,14 +809,14 @@ export function LobbyWaitingLounge({
             role="status"
             aria-live="assertive"
             onClick={(e) => e.stopPropagation()}
-            className="pointer-events-none absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-[700] px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-emerald-950/95 via-noir-950/95 to-emerald-950/95 border-2 border-emerald-400/75 shadow-[0_14px_40px_rgba(0,0,0,0.85)] flex items-center gap-2.5"
+            className="pointer-events-none absolute top-1.5 sm:top-4 left-1/2 -translate-x-1/2 z-[700] max-w-[92%] px-3 sm:px-6 py-1 sm:py-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-950/95 via-noir-950/95 to-emerald-950/95 border-2 border-emerald-400/75 shadow-[0_14px_40px_rgba(0,0,0,0.85)] flex items-center gap-2 sm:gap-2.5"
           >
             <Timer className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300 animate-pulse shrink-0" />
             <div className="text-center">
-              <div className="text-[9px] sm:text-[10px] font-mono uppercase tracking-[0.22em] text-emerald-300">
+              <div className="hidden sm:block text-[10px] font-mono uppercase tracking-[0.22em] text-emerald-300">
                 Everyone Ready • Match Beginning
               </div>
-              <div className="font-display text-sm sm:text-lg font-bold uppercase tracking-wider text-white">
+              <div className="font-display text-xs sm:text-lg font-bold uppercase tracking-wider text-white whitespace-nowrap">
                 {countdownSec > 0 ? `Starting in ${countdownSec}...` : 'Dealing Dossiers...'}
               </div>
             </div>
@@ -760,7 +827,7 @@ export function LobbyWaitingLounge({
         {selectedPlayer && selectedPlayer.id !== myPlayerId && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute top-3 left-3 z-[710] game-hud-glass rounded-xl p-3 w-56 space-y-2 shadow-2xl"
+            className="absolute top-2 left-2 sm:top-3 sm:left-3 z-[710] game-hud-glass rounded-xl p-2 sm:p-3 w-44 sm:w-56 space-y-2 shadow-2xl"
           >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -814,61 +881,29 @@ export function LobbyWaitingLounge({
           </div>
         )}
 
-        {/* Mobile / Touch Directional Pad (hidden on desktop lg+) */}
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="lg:hidden absolute bottom-2.5 left-2.5 z-[680] grid grid-cols-3 gap-1 w-24 h-24 opacity-85"
-          aria-label="Touch movement pad"
-        >
-          <div />
+        {/* Tablet Touch Directional Pad (overlay on sm..md, hidden on phone & desktop lg+) */}
+        {renderTouchPadGrid(false)}
+      </div>
+
+      {/* Unobstructed Phone Touch Bar (<640px) directly below the arena */}
+      <div className="sm:hidden flex items-center justify-between gap-3 rounded-xl bg-noir-900/80 border border-gold-500/25 px-3 py-2">
+        {renderTouchPadGrid(true)}
+        <div className="flex-1 min-w-0 space-y-2 text-right">
+          <p className="text-[11px] text-cream-300/85 leading-snug">
+            Tap anywhere on the lounge floor or use the D-pad to walk around.
+          </p>
           <button
             type="button"
-            aria-label="Move up"
-            onPointerDown={() => setTouchPad(0, -1)}
-            onPointerUp={() => setTouchPad(0, 0)}
-            onPointerLeave={() => setTouchPad(0, 0)}
-            onPointerCancel={() => setTouchPad(0, 0)}
-            className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
+            onClick={onOpenCustomization}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-display font-bold uppercase tracking-wider transition cursor-pointer ${
+              nearCustomize
+                ? 'bg-gold-500 text-noir-950 border-cream-50 shadow-md'
+                : 'bg-noir-950/90 text-gold-200 border-gold-400/50'
+            }`}
           >
-            <ArrowUp className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5" />
+            Customize Avatar
           </button>
-          <div />
-          <button
-            type="button"
-            aria-label="Move left"
-            onPointerDown={() => setTouchPad(-1, 0)}
-            onPointerUp={() => setTouchPad(0, 0)}
-            onPointerLeave={() => setTouchPad(0, 0)}
-            onPointerCancel={() => setTouchPad(0, 0)}
-            className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-          </button>
-          <div className="rounded-lg bg-noir-950/50 border border-gold-500/15" />
-          <button
-            type="button"
-            aria-label="Move right"
-            onPointerDown={() => setTouchPad(1, 0)}
-            onPointerUp={() => setTouchPad(0, 0)}
-            onPointerLeave={() => setTouchPad(0, 0)}
-            onPointerCancel={() => setTouchPad(0, 0)}
-            className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
-          >
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <div />
-          <button
-            type="button"
-            aria-label="Move down"
-            onPointerDown={() => setTouchPad(0, 1)}
-            onPointerUp={() => setTouchPad(0, 0)}
-            onPointerLeave={() => setTouchPad(0, 0)}
-            onPointerCancel={() => setTouchPad(0, 0)}
-            className="rounded-lg bg-noir-950/85 border border-gold-500/40 text-gold-200 flex items-center justify-center active:bg-gold-500/30 touch-none"
-          >
-            <ArrowDown className="w-3.5 h-3.5" />
-          </button>
-          <div />
         </div>
       </div>
     </div>

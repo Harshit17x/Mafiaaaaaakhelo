@@ -204,9 +204,10 @@ export function HomePage() {
     [setRulesOpen, setAvatarOpen]
   );
 
-  // Auto-focus alias input when opening Create or Join sub-screen
+  // Auto-focus alias input when opening Create or Join sub-screen on desktop
   useEffect(() => {
     if (bootPhase !== 'ready') return;
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return undefined;
     if (activePanel === 'create' || activePanel === 'join') {
       const timer = window.setTimeout(() => {
         aliasInputRef.current?.focus();
@@ -369,7 +370,7 @@ export function HomePage() {
     <main
       onMouseMove={handleMouseMove}
       onClick={bootPhase === 'loading' ? skipIntro : undefined}
-      className="relative z-10 min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#060405] text-cream-100 select-none flex flex-col justify-between"
+      className="relative z-10 min-h-screen min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden bg-[#060405] text-cream-100 select-none flex flex-col justify-between"
     >
       {/* Full-bleed speakeasy 3D Paper SVG Diorama scene */}
       <div
@@ -439,22 +440,25 @@ export function HomePage() {
       </div>
 
       {/* Top bar: live player counter on the left, audio & status on the right */}
-      <div className="relative z-20 flex items-center justify-between gap-3 px-5 sm:px-10 pt-5">
+      <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-3 px-4 sm:px-10 pt-4 sm:pt-5">
         <LivePlayersBadge variant="title" />
 
-        <div className="inline-flex items-center gap-3 rounded-full bg-black/45 backdrop-blur-md border border-cream-100/15 px-3.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+        <div className="inline-flex items-center gap-2 sm:gap-3 rounded-full bg-black/45 backdrop-blur-md border border-cream-100/15 px-2.5 sm:px-3.5 py-1 sm:py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)] shrink-0">
           {connectionStatus === 'connected' ? (
             <span className="inline-flex items-center gap-1.5 font-condensed uppercase tracking-[0.14em] text-[11px] text-cream-100/80">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              Online
+              <span className="hidden sm:inline">Online</span>
             </span>
           ) : (
             <span
               role="status"
+              aria-label={connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
               className="inline-flex items-center gap-1.5 font-condensed uppercase tracking-[0.14em] text-[11px] text-amber-300"
             >
               <WifiOff className="w-3 h-3 animate-pulse" />
-              {connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+              <span className="hidden sm:inline">
+                {connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
+              </span>
             </span>
           )}
           <span className="h-3.5 w-px bg-cream-100/15" aria-hidden="true" />
@@ -463,10 +467,10 @@ export function HomePage() {
       </div>
 
       {/* Left-anchored AAA Title Column */}
-      <div className="relative z-20 flex-1 flex items-start px-6 sm:px-12 md:px-16 lg:px-24 pt-[6vh] sm:pt-[9vh] pb-6">
+      <div className="relative z-20 flex-1 flex items-start px-5 sm:px-12 md:px-16 lg:px-24 pt-[4vh] sm:pt-[9vh] pb-4 sm:pb-6">
         <div className="w-full max-w-[390px] sm:max-w-[430px] flex flex-col items-start">
           {/* MIDNIGHT CITY Crimson Badge + Distressed MAFIA Logo */}
-          <div key={`logo-${introRunId}`} className="mb-7 sm:mb-9 animate-title-enter">
+          <div key={`logo-${introRunId}`} className="mb-6 sm:mb-9 animate-title-enter max-w-full">
             <MafiaTitleLogo />
           </div>
 
@@ -495,7 +499,10 @@ export function HomePage() {
               </div>
 
               <p className="font-condensed tracking-[0.06em] text-xs text-cream-300/60 pt-1">
-                Click anywhere or press Space to enter the speakeasy
+                <span className="sm:hidden">Tap anywhere to enter the speakeasy</span>
+                <span className="hidden sm:inline">
+                  Click anywhere or press Space to enter the speakeasy
+                </span>
               </p>
             </section>
           ) : activePanel === 'menu' ? (
@@ -584,7 +591,7 @@ export function HomePage() {
                       onChange={(e) => setPlayerName(e.target.value)}
                       maxLength={20}
                       placeholder="e.g. Detective Vance"
-                      className="w-full bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-sm px-3.5 py-2.5 text-sm text-cream-50 placeholder:text-cream-400/50 transition"
+                      className="w-full bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-sm px-3.5 py-2.5 text-base sm:text-sm text-cream-50 placeholder:text-cream-400/50 transition"
                     />
                   </div>
 
@@ -601,8 +608,11 @@ export function HomePage() {
                       value={roomCode}
                       onChange={(e) => setRoomCode(normalizeRoomCode(e.target.value))}
                       maxLength={6}
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
                       placeholder="ABCDEF"
-                      className="w-full font-mono uppercase tracking-[0.35em] bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-sm px-3.5 py-2.5 text-sm text-amber-200 placeholder:text-cream-400/40 transition"
+                      className="w-full font-mono uppercase tracking-[0.35em] bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-sm px-3.5 py-2.5 text-base sm:text-sm text-amber-200 placeholder:text-cream-400/40 transition"
                     />
                   </div>
 
@@ -713,22 +723,22 @@ export function HomePage() {
       </div>
 
       {/* Bottom-right console-style control prompt bar */}
-      <footer className="relative z-20 px-6 sm:px-10 pb-5 flex flex-wrap items-center justify-between gap-4">
+      <footer className="relative z-20 px-4 sm:px-10 pb-4 sm:pb-5 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div className="hidden sm:flex items-center gap-2 font-condensed uppercase tracking-[0.16em] text-[11px] text-cream-300/50">
           <span>MAFIA — MIDNIGHT CITY</span>
           <span>•</span>
           <span>5–16 PLAYERS</span>
         </div>
 
-        <div className="ml-auto flex flex-wrap items-center gap-3 sm:gap-5 font-condensed uppercase tracking-[0.1em] text-xs text-cream-100/80">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3 sm:gap-5 font-condensed uppercase tracking-[0.1em] text-xs text-cream-100/80">
           {bootPhase === 'ready' && (
             <>
               <button
                 type="button"
                 onClick={replayIntro}
-                className="inline-flex items-center gap-1.5 text-cream-100/75 hover:text-amber-300 transition"
+                className="inline-flex items-center gap-1.5 py-1 text-cream-100/75 hover:text-amber-300 transition"
               >
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
+                <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
                   R
                 </span>
                 <span className="inline-flex items-center gap-1">
@@ -740,9 +750,9 @@ export function HomePage() {
               <button
                 type="button"
                 onClick={() => setMutedAudio(!mutedAudio)}
-                className="inline-flex items-center gap-1.5 text-cream-100/75 hover:text-amber-300 transition"
+                className="inline-flex items-center gap-1.5 py-1 text-cream-100/75 hover:text-amber-300 transition"
               >
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
+                <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
                   M
                 </span>
                 <span className="inline-flex items-center gap-1">
@@ -759,9 +769,9 @@ export function HomePage() {
                 <button
                   type="button"
                   onClick={() => activateMenuItem(activeMenuItem.id)}
-                  className="inline-flex items-center gap-1.5 text-cream-100 hover:text-amber-200 transition"
+                  className="inline-flex items-center gap-1.5 py-1 text-cream-100 hover:text-amber-200 transition"
                 >
-                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-cream-100/70 text-[10px] leading-none">
+                  <span className="hidden sm:inline-flex items-center justify-center w-5 h-5 rounded-full border border-cream-100/70 text-[10px] leading-none">
                     ↵
                   </span>
                   <span>Select</span>
@@ -774,9 +784,9 @@ export function HomePage() {
                     setLocalError(null);
                     setActivePanel('menu');
                   }}
-                  className="inline-flex items-center gap-1.5 text-cream-100 hover:text-amber-200 transition"
+                  className="inline-flex items-center gap-1.5 py-1 text-cream-100 hover:text-amber-200 transition"
                 >
-                  <span className="inline-flex items-center justify-center px-1.5 h-5 rounded-full border border-cream-100/70 text-[10px] leading-none">
+                  <span className="hidden sm:inline-flex items-center justify-center px-1.5 h-5 rounded-full border border-cream-100/70 text-[10px] leading-none">
                     ESC
                   </span>
                   <span>Back</span>
@@ -789,9 +799,9 @@ export function HomePage() {
             <button
               type="button"
               onClick={skipIntro}
-              className="inline-flex items-center gap-1.5 text-cream-100/80 hover:text-amber-300 transition"
+              className="inline-flex items-center gap-1.5 py-1 text-cream-100/80 hover:text-amber-300 transition"
             >
-              <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
+              <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
                 SPACE
               </span>
               <span className="inline-flex items-center gap-1">
@@ -810,22 +820,23 @@ export function HomePage() {
           aria-modal="true"
           aria-label="Create Room Setup and House Rules"
         >
-          <div className="relative w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden rounded-2xl border border-gold-500/35 bg-[#0c0a0d] shadow-[0_28px_80px_rgba(0,0,0,0.9)]">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-gold-500/20 bg-noir-950/90">
-              <div className="flex items-center gap-3">
+          <div className="relative w-full max-w-5xl max-h-[94dvh] flex flex-col overflow-hidden rounded-2xl border border-gold-500/35 bg-[#0c0a0d] shadow-[0_28px_80px_rgba(0,0,0,0.9)]">
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-3.5 sm:px-6 py-3 sm:py-3.5 border-b border-gold-500/20 bg-noir-950/90">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     soundEngine.playMenuBack();
                     setAvatarOpen(true, 'create');
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gold-500/35 bg-noir-900 hover:bg-noir-800 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-gold-500/35 bg-noir-900 hover:bg-noir-800 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
                   Back to Avatar
                 </button>
-                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/50 text-[10px] font-mono uppercase tracking-[0.18em] text-amber-200 font-bold">
-                  Step 2 of 2 • Table &amp; Rules
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/50 text-[10px] font-mono uppercase tracking-[0.14em] sm:tracking-[0.18em] text-amber-200 font-bold">
+                  <span className="sm:hidden">2/2 • Rules</span>
+                  <span className="hidden sm:inline">Step 2 of 2 • Table &amp; Rules</span>
                 </span>
               </div>
 
@@ -842,10 +853,10 @@ export function HomePage() {
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
-              <div className="grid lg:grid-cols-12 gap-5 items-start">
+            <div className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-6">
+              <div className="grid lg:grid-cols-12 gap-4 sm:gap-5 items-start">
                 <form onSubmit={handleCreate} className="lg:col-span-4 space-y-4">
-                  <div className="rounded-2xl border border-gold-500/25 bg-noir-950/90 p-4 space-y-4">
+                  <div className="rounded-2xl border border-gold-500/25 bg-noir-950/90 p-3.5 sm:p-4 space-y-4">
                     <div>
                       <h2 className="font-display text-lg text-gold-200 uppercase tracking-wider">
                         Create Private Table
@@ -870,7 +881,7 @@ export function HomePage() {
                         onChange={(e) => setPlayerName(e.target.value)}
                         maxLength={20}
                         placeholder="e.g. Detective Vance"
-                        className="w-full bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-lg px-3.5 py-2.5 text-sm text-cream-50 placeholder:text-cream-400/50 transition"
+                        className="w-full bg-black/55 backdrop-blur-sm border border-cream-100/20 focus:border-amber-400/80 rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-cream-50 placeholder:text-cream-400/50 transition"
                       />
                     </div>
 

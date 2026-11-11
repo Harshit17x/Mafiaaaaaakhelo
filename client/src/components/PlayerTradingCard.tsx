@@ -34,6 +34,7 @@ export interface PlayerTradingCardProps {
   onKickPlayer?: () => void;
   onHoverChange?: (hovered: boolean) => void;
   compact?: boolean;
+  fluid?: boolean;
 }
 
 export function PlayerTradingCard({
@@ -54,6 +55,7 @@ export function PlayerTradingCard({
   onKickPlayer,
   onHoverChange,
   compact = false,
+  fluid = false,
 }: PlayerTradingCardProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [glare, setGlare] = useState<{ x: number; y: number; active: boolean }>({
@@ -67,7 +69,11 @@ export function PlayerTradingCard({
     return (
       <div
         className={`${
-          compact ? 'w-[7.4rem] h-[9.4rem]' : 'w-36 h-44'
+          fluid
+            ? 'w-full max-w-[11rem] h-[10.5rem]'
+            : compact
+              ? 'w-[7.4rem] h-[9.4rem]'
+              : 'w-36 h-44'
         } rounded-xl p-[1.5px] bg-gradient-to-b from-gold-400/35 via-gold-600/15 to-noir-900/60 shadow-[0_14px_32px_rgba(0,0,0,0.72)] select-none pointer-events-none`}
       >
         <div className="relative w-full h-full rounded-[10.5px] bg-gradient-to-b from-[#131926]/90 via-[#0c101a]/92 to-[#070a11]/95 backdrop-blur-md border border-dashed border-gold-500/25 flex flex-col items-center justify-between p-2.5 text-center overflow-hidden">
@@ -115,6 +121,7 @@ export function PlayerTradingCard({
             : 'from-[#231c14] via-[#141622] to-[#090d16]';
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     const el = cardRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -126,7 +133,8 @@ export function PlayerTradingCard({
     setTilt({ rx, ry });
   };
 
-  const handlePointerEnter = () => {
+  const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     onHoverChange?.(true);
     setGlare((prev) => ({ ...prev, active: true }));
   };
@@ -161,7 +169,11 @@ export function PlayerTradingCard({
         )}deg) ${isSelectedVote ? 'translateY(-6px) scale(1.04)' : glare.active ? 'translateY(-4px) scale(1.02)' : ''}`,
       }}
       className={`group relative select-none transition-[transform,filter] duration-150 ease-out will-change-transform ${
-        compact ? 'w-[8.6rem] sm:w-[9.1rem]' : 'w-40 sm:w-44'
+        fluid
+          ? 'w-full max-w-[11rem] mx-auto'
+          : compact
+            ? 'w-[8.2rem] sm:w-[9.1rem]'
+            : 'w-40 sm:w-44'
       }`}
     >
       {/* Ambient ground contact & selection aura */}
@@ -404,7 +416,7 @@ export function PlayerTradingCard({
                   onClick={onTransferHost}
                   title="Transfer Host"
                   aria-label={`Transfer host to ${player.name}`}
-                  className="flex-1 py-1 rounded bg-gradient-to-b from-noir-800 to-noir-950 hover:from-noir-700 hover:to-noir-900 border border-gold-400/45 text-gold-200 text-[9.5px] font-semibold inline-flex items-center justify-center gap-0.5 shadow-sm transition cursor-pointer"
+                  className="flex-1 py-1.5 sm:py-1 rounded bg-gradient-to-b from-noir-800 to-noir-950 hover:from-noir-700 hover:to-noir-900 border border-gold-400/45 text-gold-200 text-[10px] sm:text-[9.5px] font-semibold inline-flex items-center justify-center gap-0.5 shadow-sm transition cursor-pointer"
                 >
                   <Crown className="w-2.5 h-2.5" />
                   Host
@@ -414,7 +426,7 @@ export function PlayerTradingCard({
                   onClick={onKickPlayer}
                   title="Kick Player"
                   aria-label={`Kick ${player.name}`}
-                  className="flex-1 py-1 rounded bg-gradient-to-b from-crimson-900/80 to-noir-950 hover:from-crimson-800 hover:to-crimson-950 border border-crimson-400/45 text-crimson-200 text-[9.5px] font-semibold inline-flex items-center justify-center gap-0.5 shadow-sm transition cursor-pointer"
+                  className="flex-1 py-1.5 sm:py-1 rounded bg-gradient-to-b from-crimson-900/80 to-noir-950 hover:from-crimson-800 hover:to-crimson-950 border border-crimson-400/45 text-crimson-200 text-[10px] sm:text-[9.5px] font-semibold inline-flex items-center justify-center gap-0.5 shadow-sm transition cursor-pointer"
                 >
                   <UserMinus className="w-2.5 h-2.5" />
                   Kick
@@ -426,7 +438,7 @@ export function PlayerTradingCard({
               <button
                 type="button"
                 onClick={onToggleAccuse}
-                className={`w-full py-1 rounded-md text-[9.5px] font-display font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1 shadow-md transition cursor-pointer ${
+                className={`w-full py-1.5 sm:py-1 rounded-md text-[10px] sm:text-[9.5px] font-display font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1 shadow-md transition cursor-pointer ${
                   iAccused
                     ? 'bg-gradient-to-b from-crimson-500 to-crimson-700 border-crimson-200 text-white shadow-[0_0_12px_rgba(224,79,91,0.5)]'
                     : 'bg-gradient-to-b from-noir-800 to-noir-950 border-gold-400/45 text-gold-200 hover:border-crimson-400 hover:text-crimson-200'
@@ -441,7 +453,7 @@ export function PlayerTradingCard({
               <button
                 type="button"
                 onClick={onSelectVote}
-                className={`w-full py-1 rounded-md text-[9.5px] font-display font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1 shadow-md transition cursor-pointer ${
+                className={`w-full py-1.5 sm:py-1 rounded-md text-[10px] sm:text-[9.5px] font-display font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1 shadow-md transition cursor-pointer ${
                   isSelectedVote
                     ? 'bg-gradient-to-b from-crimson-500 to-crimson-700 border-crimson-100 text-white shadow-[0_0_14px_rgba(224,79,91,0.6)]'
                     : 'bg-gradient-to-b from-noir-800 to-noir-950 border-gold-400/50 text-gold-200 hover:border-gold-300 hover:text-cream-50'

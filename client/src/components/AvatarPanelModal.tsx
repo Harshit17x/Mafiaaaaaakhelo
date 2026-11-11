@@ -106,12 +106,14 @@ export function AvatarPanelModal() {
   const [draft, setDraft] = useState<PlayerAvatarConfig>(myAvatar);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'board' | 'studio'>('board');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (avatarOpen) {
       setDraft(myAvatar);
       setUploadError(null);
+      setMobileTab('board');
     }
   }, [avatarOpen, myAvatar]);
 
@@ -227,6 +229,7 @@ export function AvatarPanelModal() {
         offsetX: 0,
         offsetY: 0,
       }));
+      setMobileTab('studio');
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Unable to load image.');
     }
@@ -261,23 +264,29 @@ export function AvatarPanelModal() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-5"
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-label="Customize Player Avatar"
     >
-      <div className="relative w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden rounded-xl border border-[#e3b963]/35 shadow-[0_28px_80px_rgba(0,0,0,0.85)] bg-[#14110f]">
+      <div className="relative w-full max-w-6xl max-h-[95dvh] sm:max-h-[94dvh] flex flex-col overflow-hidden rounded-xl border border-[#e3b963]/35 shadow-[0_28px_80px_rgba(0,0,0,0.85)] bg-[#14110f]">
         {/* Top Reference-Style Bar */}
-        <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 bg-[#14110f] pr-3 sm:pr-5 border-b border-black/60">
-          <div className="flex items-center gap-3">
+        <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 bg-[#14110f] pr-2.5 sm:pr-5 border-b border-black/60 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setAvatarOpen(false)}
-              className="inline-flex items-center gap-1.5 bg-[#f4f1ea] hover:bg-white active:scale-[0.98] text-[#171310] font-condensed font-black uppercase tracking-wide text-sm sm:text-base px-5 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition cursor-pointer"
+              className="inline-flex items-center gap-1 bg-[#f4f1ea] hover:bg-white active:scale-[0.98] text-[#171310] font-condensed font-black uppercase tracking-wide text-xs sm:text-base px-3 sm:px-5 py-2.5 sm:py-3 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4 stroke-[3]" />
               <span>BACK</span>
             </button>
+
+            {avatarFlowTarget && (
+              <span className="sm:hidden px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/50 text-[10px] font-mono uppercase tracking-[0.12em] text-amber-200 font-bold">
+                1/2 • Avatar
+              </span>
+            )}
 
             <div className="hidden sm:flex items-center gap-2.5 pl-2">
               {avatarFlowTarget && (
@@ -292,21 +301,22 @@ export function AvatarPanelModal() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 py-2 pl-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 pl-1">
             <button
               type="button"
               onClick={handleRandomize}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#271b15] hover:bg-[#36241b] border border-gold-500/35 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
+              aria-label="Randomize avatar"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded bg-[#271b15] hover:bg-[#36241b] border border-gold-500/35 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
             >
               <Shuffle className="w-3.5 h-3.5" />
-              Randomize
+              <span className="hidden sm:inline">Randomize</span>
             </button>
 
             <button
               type="button"
               onClick={() => void handleSaveAndClose()}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-r from-[#148653] to-[#1aa366] hover:brightness-110 border border-emerald-300/50 text-xs sm:text-sm font-condensed font-black uppercase tracking-wider text-white shadow-lg disabled:opacity-60 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded bg-gradient-to-r from-[#148653] to-[#1aa366] hover:brightness-110 border border-emerald-300/50 text-xs sm:text-sm font-condensed font-black uppercase tracking-wider text-white shadow-lg disabled:opacity-60 transition cursor-pointer"
             >
               {saving ? (
                 <>
@@ -315,7 +325,10 @@ export function AvatarPanelModal() {
                 </>
               ) : avatarFlowTarget ? (
                 <>
-                  <span>
+                  <span className="sm:hidden">
+                    {avatarFlowTarget === 'create' ? 'Next: Rules' : 'Next: Alias'}
+                  </span>
+                  <span className="hidden sm:inline">
                     {avatarFlowTarget === 'create' ? 'Continue to Room Settings' : 'Continue to Alias'}
                   </span>
                   <ArrowRight className="w-4 h-4 stroke-[2.5]" />
@@ -330,15 +343,48 @@ export function AvatarPanelModal() {
           </div>
         </div>
 
+        {/* Mobile Tab Switcher (Pinboard vs Polaroid Studio) */}
+        <div className="lg:hidden flex items-center justify-between gap-2 px-2.5 py-2 bg-[#1a130f] border-b border-gold-500/20 shrink-0">
+          <div className="grid grid-cols-2 gap-1.5 flex-1">
+            <button
+              type="button"
+              onClick={() => setMobileTab('board')}
+              className={`py-1.5 px-2.5 rounded-lg text-xs font-condensed font-bold uppercase tracking-wider border transition cursor-pointer ${
+                mobileTab === 'board'
+                  ? 'bg-gold-500/20 border-gold-400 text-gold-200'
+                  : 'bg-noir-950/70 border-gold-500/20 text-cream-300'
+              }`}
+            >
+              Crew Pinboard
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('studio')}
+              className={`py-1.5 px-2.5 rounded-lg text-xs font-condensed font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                mobileTab === 'studio'
+                  ? 'bg-gold-500/20 border-gold-400 text-gold-200'
+                  : 'bg-noir-950/70 border-gold-500/20 text-cream-300'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Studio ({activeLabel})
+            </button>
+          </div>
+        </div>
+
         {/* Folded / Torn Paper Scrap Accent under Header matching reference */}
-        <div className="relative flex-1 min-h-0 grid lg:grid-cols-12 max-lg:overflow-y-auto max-lg:overflow-x-hidden lg:overflow-hidden pinboard-scroll">
+        <div className="relative flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
           {/* LEFT: Brown Diamond Polaroid Pinboard */}
-          <div className="relative lg:col-span-7 xl:col-span-8 pinboard-surface flex flex-col lg:min-h-0">
+          <div
+            className={`relative lg:col-span-7 xl:col-span-8 pinboard-surface flex-col min-h-0 ${
+              mobileTab === 'board' ? 'flex flex-1' : 'hidden lg:flex'
+            }`}
+          >
             {/* Decorative Folded Paper Scraps along Top Edge */}
             <svg
               viewBox="0 0 900 32"
               preserveAspectRatio="none"
-              className="pointer-events-none absolute top-0 inset-x-0 w-full h-6 sm:h-7 z-10 opacity-95"
+              className="pointer-events-none absolute top-0 inset-x-0 w-full h-5 sm:h-7 z-10 opacity-95"
               aria-hidden="true"
             >
               <polygon points="105,0 148,0 132,12 118,22 108,8" fill="#d9d5cc" />
@@ -347,22 +393,22 @@ export function AvatarPanelModal() {
               <polygon points="445,0 620,0 580,17 520,7" fill="#efece4" />
             </svg>
 
-            <div className="relative z-10 px-5 sm:px-8 pt-6 pb-2 flex items-end justify-between gap-3">
+            <div className="relative z-10 px-3.5 sm:px-8 pt-5 sm:pt-6 pb-2 flex flex-wrap items-end justify-between gap-2 shrink-0">
               <div>
-                <h2 className="font-condensed font-black italic text-2xl sm:text-3xl tracking-wider text-[#271209] drop-shadow-[0_1px_0_rgba(245,223,176,0.25)]">
-                  CUSTOMIZATION AREA <span className="text-lg align-middle not-italic">▼</span>
+                <h2 className="font-condensed font-black italic text-xl sm:text-3xl tracking-wider text-[#271209] drop-shadow-[0_1px_0_rgba(245,223,176,0.25)]">
+                  CUSTOMIZATION AREA <span className="text-base sm:text-lg align-middle not-italic">▼</span>
                 </h2>
-                <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-[#ecd8be]/80 mt-0.5">
+                <p className="text-[10.5px] sm:text-[11px] font-mono uppercase tracking-[0.14em] sm:tracking-[0.18em] text-[#ecd8be]/80 mt-0.5">
                   Add, delete, or pin a dossier avatar &amp; style its card
                 </p>
               </div>
-              <span className="text-[11px] font-mono uppercase tracking-wider px-2.5 py-1 rounded bg-[#261108]/60 border border-[#f5dfb0]/20 text-gold-200">
+              <span className="text-[10.5px] sm:text-[11px] font-mono uppercase tracking-wider px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-[#261108]/60 border border-[#f5dfb0]/20 text-gold-200">
                 {AVATAR_PRESETS.length} Crew + {savedCustomAvatars.length} Custom
               </span>
             </div>
 
-            <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto overflow-x-hidden pinboard-scroll px-5 sm:px-8 pt-4 pb-8">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 sm:gap-6 items-start">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pinboard-scroll px-3.5 sm:px-8 pt-3 sm:pt-4 pb-6 sm:pb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-6 items-start">
                 {AVATAR_PRESETS.map((preset) => {
                   const isSelected = draft.presetId === preset.id;
                   const cardAvatar: PlayerAvatarConfig = isSelected
@@ -489,7 +535,11 @@ export function AvatarPanelModal() {
           </div>
 
           {/* RIGHT: Customize Studio Workbench */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-[#1c120d] border-t lg:border-t-0 lg:border-l border-gold-500/20 flex flex-col lg:min-h-0 lg:overflow-y-auto overflow-x-hidden pinboard-scroll p-4 sm:p-5 space-y-4">
+          <div
+            className={`lg:col-span-5 xl:col-span-4 bg-[#1c120d] border-t lg:border-t-0 lg:border-l border-gold-500/20 flex-col min-h-0 overflow-y-auto overflow-x-hidden pinboard-scroll p-3.5 sm:p-5 space-y-4 ${
+              mobileTab === 'studio' ? 'flex flex-1' : 'hidden lg:flex'
+            }`}
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-gold-300">
                 <SlidersHorizontal className="w-4 h-4" />
@@ -577,12 +627,12 @@ export function AvatarPanelModal() {
             </div>
 
             {/* Frame Tint & Pushpin Color */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-3">
               <div className="space-y-1.5">
                 <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-cream-300">
                   Polaroid Stock
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-1.5">
                   {FRAME_OPTIONS.map((opt) => (
                     <button
                       key={opt.id}
@@ -590,7 +640,7 @@ export function AvatarPanelModal() {
                       title={opt.label}
                       aria-label={`${opt.label} Polaroid frame`}
                       onClick={() => setDraft((prev) => ({ ...prev, frameTint: opt.id }))}
-                      className={`w-8 h-8 rounded border-2 flex items-center justify-center transition cursor-pointer ${opt.swatchClass} ${
+                      className={`w-9 h-9 sm:w-8 sm:h-8 rounded border-2 flex items-center justify-center transition cursor-pointer ${opt.swatchClass} ${
                         draft.frameTint === opt.id
                           ? 'ring-2 ring-gold-300 scale-105'
                           : 'opacity-80 hover:opacity-100'
@@ -608,7 +658,7 @@ export function AvatarPanelModal() {
                 <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-cream-300">
                   Pushpin
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-1">
                   {PIN_OPTIONS.map((opt) => (
                     <button
                       key={opt.id}
@@ -616,7 +666,7 @@ export function AvatarPanelModal() {
                       title={`${opt.label} Pushpin`}
                       aria-label={`${opt.label} pushpin`}
                       onClick={() => setDraft((prev) => ({ ...prev, pinColor: opt.id }))}
-                      className={`p-1 rounded border transition cursor-pointer ${
+                      className={`p-1.5 sm:p-1 rounded border transition cursor-pointer ${
                         draft.pinColor === opt.id
                           ? 'bg-gold-500/25 border-gold-300 scale-105'
                           : 'bg-noir-900/60 border-transparent hover:border-gold-500/30'
@@ -649,7 +699,7 @@ export function AvatarPanelModal() {
                     }))
                   }
                   placeholder="Optional alias note (e.g. The Don)"
-                  className="w-full rounded-lg bg-noir-950/90 border border-gold-500/30 focus:border-gold-300 pl-3 pr-8 py-1.5 text-xs text-cream-50 placeholder-cream-400/50 focus:outline-none"
+                  className="w-full rounded-lg bg-noir-950/90 border border-gold-500/30 focus:border-gold-300 pl-3 pr-8 py-2 sm:py-1.5 text-base sm:text-xs text-cream-50 placeholder-cream-400/50 focus:outline-none"
                 />
                 {draft.caption && (
                   <button

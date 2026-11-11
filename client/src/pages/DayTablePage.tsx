@@ -88,28 +88,28 @@ export function DayTablePage({
         : 'Verdict Delivered';
 
   const topLeftHud = (
-    <div className="game-hud-glass rounded-2xl px-4 py-2.5 flex flex-wrap items-center gap-3">
+    <div className="game-hud-glass rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2.5 flex flex-wrap items-center gap-2 sm:gap-3">
       <div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-[0.26em] text-gold-300">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-[9.5px] sm:text-[10px] font-mono uppercase tracking-[0.2em] sm:tracking-[0.26em] text-gold-300">
             Day {game.roundNumber}
           </span>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-noir-950/80 border border-gold-500/25 text-cream-300">
+          <span className="text-[9.5px] sm:text-[10px] font-mono px-1.5 py-0.5 rounded bg-noir-950/80 border border-gold-500/25 text-cream-300">
             {alivePlayers.length}/{playingPlayers.length} Alive
           </span>
         </div>
-        <h2 className="font-display text-base sm:text-lg text-cream-50 uppercase tracking-wider leading-tight">
+        <h2 className="font-display text-sm sm:text-lg text-cream-50 uppercase tracking-wider leading-tight">
           {phaseHeadline}
         </h2>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <CountdownBadge endsAt={game.phaseEndsAt} paused={game.paused} />
         {phase === 'DAY_DISCUSSION' && amAlive && settings.narratorMode === 'AUTO_NARRATOR' && (
           <button
             type="button"
             onClick={() => void toggleReadyToVote(!me?.readyToVote)}
-            className={`px-3 py-1.5 rounded-xl text-[11px] font-display font-bold uppercase tracking-wider border transition cursor-pointer ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10.5px] sm:text-[11px] font-display font-bold uppercase tracking-wider border transition cursor-pointer ${
               me?.readyToVote
                 ? 'bg-emerald-800/85 border-emerald-400/60 text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.3)]'
                 : 'bg-noir-900/90 border-gold-500/40 text-gold-200 hover:bg-noir-800'
@@ -128,16 +128,17 @@ export function DayTablePage({
         <button
           type="button"
           onClick={() => setVerdictMinimized(false)}
-          className="game-hud-glass px-3 py-1.5 rounded-xl text-xs font-display font-semibold uppercase tracking-wider text-gold-200 hover:border-gold-300 inline-flex items-center gap-1.5 cursor-pointer"
+          className="game-hud-glass px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-display font-semibold uppercase tracking-wider text-gold-200 hover:border-gold-300 inline-flex items-center gap-1.5 cursor-pointer"
         >
           <Gavel className="w-3.5 h-3.5 text-gold-300" />
-          Verdict Sheet
+          <span className="hidden sm:inline">Verdict Sheet</span>
+          <span className="sm:hidden">Verdict</span>
         </button>
       )}
       <button
         type="button"
         onClick={() => setChatOpen((v) => !v)}
-        className={`game-hud-glass px-3 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer ${
+        className={`game-hud-glass px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer ${
           chatOpen ? 'border-gold-300 text-gold-200' : 'text-cream-200 hover:text-gold-200'
         }`}
       >
@@ -154,21 +155,21 @@ export function DayTablePage({
 
   const bottomActionHud =
     phase === 'DAY_VOTE' && amAlive && vote ? (
-      <div className="game-hud-glass rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="game-hud-glass rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
         {vote.myVote !== null ? (
           <div className="flex items-center gap-2 text-emerald-300 text-xs sm:text-sm font-medium">
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4 shrink-0" />
             Ballot sealed ({vote.votedPlayerIds.length}/{alivePlayers.length} cast). Awaiting
             verdict...
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
               {settings.allowSkipVote && (
                 <button
                   type="button"
                   onClick={() => setSelectedVoteTarget(SKIP_VOTE_TARGET)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-display font-bold uppercase tracking-wider border transition cursor-pointer ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-display font-bold uppercase tracking-wider border transition cursor-pointer ${
                     selectedVoteTarget === SKIP_VOTE_TARGET
                       ? 'bg-cream-100 text-noir-950 border-cream-50 shadow-md'
                       : 'bg-noir-900/90 border-gold-500/35 text-cream-200 hover:bg-noir-800'
@@ -177,19 +178,19 @@ export function DayTablePage({
                   Spare All (Skip)
                 </button>
               )}
-              <span className="text-xs text-cream-200">
+              <span className="text-[11px] sm:text-xs text-cream-200 truncate">
                 {selectedVoteTarget === SKIP_VOTE_TARGET
                   ? 'Ballot: Spare everyone today'
                   : selectedVoteTarget
                     ? `Target Locked: ${playerMap.get(selectedVoteTarget)?.name}`
-                    : 'Click a player card around the 3D round table'}
+                    : 'Tap a player card to target'}
               </span>
             </div>
             <button
               type="button"
               disabled={!selectedVoteTarget}
               onClick={() => selectedVoteTarget && void castVote(selectedVoteTarget)}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-crimson-600 to-crimson-500 hover:brightness-110 text-white font-display font-bold uppercase tracking-wider text-xs border border-crimson-300/40 shadow-[0_0_20px_rgba(201,42,55,0.45)] disabled:opacity-40 transition cursor-pointer"
+              className="w-full sm:w-auto px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-crimson-600 to-crimson-500 hover:brightness-110 text-white font-display font-bold uppercase tracking-wider text-xs border border-crimson-300/40 shadow-[0_0_20px_rgba(201,42,55,0.45)] disabled:opacity-40 transition cursor-pointer"
             >
               Confirm Ballot
             </button>
@@ -197,13 +198,13 @@ export function DayTablePage({
         )}
       </div>
     ) : !amAlive ? (
-      <div className="game-hud-glass rounded-full px-4 py-1.5 text-center text-xs text-cream-300 mx-auto w-fit">
+      <div className="game-hud-glass rounded-full px-3 sm:px-4 py-1.5 text-center text-[11px] sm:text-xs text-cream-300 mx-auto w-fit max-w-full">
         Spectating from the shadows • Open Chat to whisper with ghosts
       </div>
     ) : null;
 
   return (
-    <div className="relative z-10 w-full">
+    <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
       <MidnightLoungeTable3D
         players={playingPlayers}
         myPlayerId={myPlayerId}
@@ -234,104 +235,106 @@ export function DayTablePage({
       {/* Floating Verdict Modal Card over Full-Screen 3D Table */}
       <AnimatePresence>
         {phase === 'VOTE_RESULT' && voteResult && !verdictMinimized && (
-          <motion.section
-            initial={{ opacity: 0, scale: 0.94, y: 14 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="fixed inset-x-4 top-28 sm:top-32 mx-auto max-w-xl z-[970] p-[2px] rounded-2xl foil-card-frame"
-          >
-            <div className="rounded-[14px] bg-gradient-to-b from-[#161c2d]/95 to-[#090c15]/98 backdrop-blur-xl p-5 sm:p-6 space-y-4">
-              <div className="flex items-start justify-between gap-3 border-b border-gold-500/25 pb-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-noir-950 border border-gold-400/40">
-                    <Gavel className="w-6 h-6 text-gold-300" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <h3 className="font-display text-lg sm:text-xl text-cream-50 uppercase tracking-wider">
-                      {voteResult.eliminatedPlayerName
-                        ? `${voteResult.eliminatedPlayerName} Eliminated`
-                        : voteResult.needsRevote
-                          ? 'Tie Detected — Revote Ordered'
-                          : 'No One Was Eliminated'}
-                    </h3>
-                    <p className="text-xs text-cream-400">
-                      {voteResult.wasTie
-                        ? 'Top suspects drew equal votes.'
-                        : voteResult.wasSkip
-                          ? 'The council chose to spare everyone today.'
-                          : 'The gavel has fallen at the round table.'}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setVerdictMinimized(true)}
-                  aria-label="Minimize verdict overlay to inspect table"
-                  className="p-1.5 rounded-lg bg-noir-900/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {voteResult.eliminatedPlayerId && voteResult.eliminatedRole && (
-                <div
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border ${
-                    ROLE_META[voteResult.eliminatedRole].badgeBgClass
-                  }`}
-                >
-                  <RoleSvgIcon role={voteResult.eliminatedRole} className="w-8 h-8" />
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider opacity-80">
-                      Dossier Unsealed
+          <div className="fixed inset-0 z-[970] flex items-center justify-center p-3 sm:p-5 pointer-events-none">
+            <motion.section
+              initial={{ opacity: 0, scale: 0.94, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="pointer-events-auto w-full max-w-xl max-h-[86dvh] flex flex-col p-[2px] rounded-2xl foil-card-frame overflow-hidden"
+            >
+              <div className="rounded-[14px] bg-gradient-to-b from-[#161c2d]/95 to-[#090c15]/98 backdrop-blur-xl p-4 sm:p-6 flex flex-col min-h-0 space-y-4">
+                <div className="flex items-start justify-between gap-3 border-b border-gold-500/25 pb-3.5 shrink-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-noir-950 border border-gold-400/40 shrink-0">
+                      <Gavel className="w-5 h-5 sm:w-6 sm:h-6 text-gold-300" aria-hidden="true" />
                     </div>
-                    <div className="font-display font-bold text-sm uppercase">
-                      {ROLE_META[voteResult.eliminatedRole].label}
+                    <div className="min-w-0">
+                      <h3 className="font-display text-base sm:text-xl text-cream-50 uppercase tracking-wider break-words">
+                        {voteResult.eliminatedPlayerName
+                          ? `${voteResult.eliminatedPlayerName} Eliminated`
+                          : voteResult.needsRevote
+                            ? 'Tie Detected — Revote Ordered'
+                            : 'No One Was Eliminated'}
+                      </h3>
+                      <p className="text-xs text-cream-400">
+                        {voteResult.wasTie
+                          ? 'Top suspects drew equal votes.'
+                          : voteResult.wasSkip
+                            ? 'The council chose to spare everyone today.'
+                            : 'The gavel has fallen at the round table.'}
+                      </p>
                     </div>
                   </div>
-                </div>
-              )}
 
-              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                {voteResult.tally.length === 0 ? (
-                  <p className="text-sm text-cream-400 italic">No ballots were cast.</p>
-                ) : (
-                  voteResult.tally.map((entry) => {
-                    const pct =
-                      totalBallots > 0 ? Math.round((entry.count / totalBallots) * 100) : 0;
-                    const voterNames = entry.voterIds
-                      .map((id) => playerMap.get(id)?.name ?? 'Unknown')
-                      .join(', ');
-                    return (
-                      <div key={entry.targetId} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs sm:text-sm">
-                          <span className="font-semibold text-cream-100">{entry.targetName}</span>
-                          <span className="font-mono text-gold-300">
-                            {entry.count} {entry.count === 1 ? 'vote' : 'votes'}
-                          </span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-noir-950 overflow-hidden border border-gold-500/20">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.6, ease: 'easeOut' }}
-                            className={`h-full ${
-                              entry.targetId === voteResult.eliminatedPlayerId
-                                ? 'bg-crimson-500'
-                                : entry.targetId === SKIP_VOTE_TARGET
-                                  ? 'bg-cream-400/60'
-                                  : 'bg-gold-500/75'
-                            }`}
-                          />
-                        </div>
-                        <div className="text-[11px] text-cream-400">Voted by: {voterNames}</div>
+                  <button
+                    type="button"
+                    onClick={() => setVerdictMinimized(true)}
+                    aria-label="Minimize verdict overlay to inspect table"
+                    className="shrink-0 p-1.5 rounded-lg bg-noir-900/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {voteResult.eliminatedPlayerId && voteResult.eliminatedRole && (
+                  <div
+                    className={`shrink-0 flex items-center gap-3 px-4 py-2.5 rounded-xl border ${
+                      ROLE_META[voteResult.eliminatedRole].badgeBgClass
+                    }`}
+                  >
+                    <RoleSvgIcon role={voteResult.eliminatedRole} className="w-8 h-8 shrink-0" />
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider opacity-80">
+                        Dossier Unsealed
                       </div>
-                    );
-                  })
+                      <div className="font-display font-bold text-sm uppercase">
+                        {ROLE_META[voteResult.eliminatedRole].label}
+                      </div>
+                    </div>
+                  </div>
                 )}
+
+                <div className="flex-1 min-h-0 space-y-2.5 overflow-y-auto pr-1">
+                  {voteResult.tally.length === 0 ? (
+                    <p className="text-sm text-cream-400 italic">No ballots were cast.</p>
+                  ) : (
+                    voteResult.tally.map((entry) => {
+                      const pct =
+                        totalBallots > 0 ? Math.round((entry.count / totalBallots) * 100) : 0;
+                      const voterNames = entry.voterIds
+                        .map((id) => playerMap.get(id)?.name ?? 'Unknown')
+                        .join(', ');
+                      return (
+                        <div key={entry.targetId} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className="font-semibold text-cream-100">{entry.targetName}</span>
+                            <span className="font-mono text-gold-300">
+                              {entry.count} {entry.count === 1 ? 'vote' : 'votes'}
+                            </span>
+                          </div>
+                          <div className="h-2.5 rounded-full bg-noir-950 overflow-hidden border border-gold-500/20">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                              className={`h-full ${
+                                entry.targetId === voteResult.eliminatedPlayerId
+                                  ? 'bg-crimson-500'
+                                  : entry.targetId === SKIP_VOTE_TARGET
+                                    ? 'bg-cream-400/60'
+                                    : 'bg-gold-500/75'
+                              }`}
+                            />
+                          </div>
+                          <div className="text-[11px] text-cream-400">Voted by: {voterNames}</div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          </motion.section>
+            </motion.section>
+          </div>
         )}
       </AnimatePresence>
 
@@ -343,19 +346,12 @@ export function DayTablePage({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 28 }}
             transition={{ duration: 0.2 }}
-            className="fixed right-3 sm:right-5 bottom-14 w-[min(24rem,calc(100vw-1.5rem))] z-[975] shadow-[0_24px_60px_rgba(0,0,0,0.85)]"
+            className="fixed right-2.5 sm:right-5 bottom-2.5 sm:bottom-14 w-[min(24rem,calc(100vw-1.25rem))] z-[975] shadow-[0_24px_60px_rgba(0,0,0,0.85)]"
           >
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setChatOpen(false)}
-                aria-label="Close chat drawer"
-                className="absolute right-2.5 top-2.5 z-20 p-1 rounded-lg bg-noir-950/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-              <ChatPanel />
-            </div>
+            <ChatPanel
+              className="h-[min(23rem,calc(100dvh-7rem))] sm:h-80 lg:h-[26rem]"
+              onClose={() => setChatOpen(false)}
+            />
           </motion.aside>
         )}
       </AnimatePresence>

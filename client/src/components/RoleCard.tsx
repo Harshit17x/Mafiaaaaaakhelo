@@ -82,9 +82,11 @@ export function RoleCard({
           setGlare((g) => ({ ...g, active: false }));
         }}
         onPointerCancel={endHold}
+        onContextMenu={(e) => e.preventDefault()}
         onKeyDown={handleKeyDown}
         onKeyUp={handleKeyUp}
-        className={`w-76 sm:w-80 h-[25.5rem] perspective-1000 ${
+        style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+        className={`w-[min(19.5rem,calc(100vw-2rem))] sm:w-80 h-[23rem] sm:h-[25.5rem] perspective-1000 ${
           holdToReveal ? 'cursor-pointer touch-none' : ''
         }`}
       >
@@ -95,7 +97,7 @@ export function RoleCard({
         >
           {/* CARD BACK — Embossed Foil Casino Back */}
           <div className="absolute inset-0 backface-hidden rounded-2xl p-[3px] foil-card-frame">
-            <div className="relative w-full h-full rounded-[13px] bg-gradient-to-b from-[#171d2f] via-[#0c111e] to-[#070911] cardstock-texture p-5 flex flex-col items-center justify-between text-center overflow-hidden">
+            <div className="relative w-full h-full rounded-[13px] bg-gradient-to-b from-[#171d2f] via-[#0c111e] to-[#070911] cardstock-texture p-4 sm:p-5 flex flex-col items-center justify-between text-center overflow-hidden">
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-2.5 rounded-xl border border-gold-400/35"
@@ -170,7 +172,7 @@ export function RoleCard({
           <div
             className={`absolute inset-0 backface-hidden rotate-y-180 rounded-2xl p-[3px] ${roleOuterFoil}`}
           >
-            <div className="relative w-full h-full rounded-[13px] bg-gradient-to-b from-[#1a1826] via-[#0e111d] to-[#070910] cardstock-texture p-5 flex flex-col items-center justify-between text-center overflow-hidden">
+            <div className="relative w-full h-full rounded-[13px] bg-gradient-to-b from-[#1a1826] via-[#0e111d] to-[#070910] cardstock-texture p-4 sm:p-5 flex flex-col items-center justify-between text-center overflow-hidden">
               <div
                 aria-hidden="true"
                 className={`pointer-events-none absolute inset-2.5 rounded-xl border ${meta.borderClass}`}
@@ -183,16 +185,16 @@ export function RoleCard({
                 <span className="text-gold-400/80">DOSSIER #47</span>
               </div>
 
-              <div className="relative z-10 flex flex-col items-center gap-3 px-1">
+              <div className="relative z-10 flex flex-col items-center gap-2.5 sm:gap-3 px-1">
                 <div
-                  className={`p-4 rounded-2xl bg-gradient-to-b from-noir-900 to-noir-950 border-2 ${meta.borderClass} shadow-[inset_0_2px_10px_rgba(0,0,0,0.85),0_10px_24px_rgba(0,0,0,0.65)]`}
+                  className={`p-3 sm:p-4 rounded-2xl bg-gradient-to-b from-noir-900 to-noir-950 border-2 ${meta.borderClass} shadow-[inset_0_2px_10px_rgba(0,0,0,0.85),0_10px_24px_rgba(0,0,0,0.65)]`}
                 >
-                  <RoleSvgIcon role={role} className={`w-16 h-16 ${meta.colorClass}`} />
+                  <RoleSvgIcon role={role} className={`w-12 h-12 sm:w-16 sm:h-16 ${meta.colorClass}`} />
                 </div>
 
-                <div className="w-full brass-nameplate rounded-lg border border-gold-400/45 py-1.5 px-3">
+                <div className="w-full brass-nameplate rounded-lg border border-gold-400/45 py-1 sm:py-1.5 px-3">
                   <h2
-                    className={`font-display text-2xl sm:text-3xl font-extrabold tracking-[0.14em] uppercase ${meta.colorClass}`}
+                    className={`font-display text-xl sm:text-3xl font-extrabold tracking-[0.14em] uppercase ${meta.colorClass}`}
                   >
                     {meta.label}
                   </h2>
@@ -203,7 +205,7 @@ export function RoleCard({
                 </p>
 
                 {role === 'MAFIA' && fellowMafiaNames.length > 0 && (
-                  <div className="mt-0.5 w-full rounded-lg bg-crimson-950/80 border border-crimson-400/50 px-3 py-2 text-xs text-crimson-100 shadow-inner">
+                  <div className="mt-0.5 w-full rounded-lg bg-crimson-950/80 border border-crimson-400/50 px-3 py-1.5 sm:py-2 text-xs text-crimson-100 shadow-inner">
                     <div className="flex items-center justify-center gap-1 font-display font-bold uppercase tracking-wider text-[10px] text-crimson-300 mb-0.5">
                       <ShieldAlert className="w-3.5 h-3.5" />
                       Fellow Syndicate

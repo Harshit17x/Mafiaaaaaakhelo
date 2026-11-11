@@ -33,8 +33,8 @@ export function MafiaTitleLogo({ compact = false, className = '' }: MafiaTitleLo
           aria-label="MAFIA"
           className={`block overflow-visible drop-shadow-[0_10px_28px_rgba(0,0,0,0.82)] ${
             compact
-              ? 'w-[220px] sm:w-[270px] h-auto'
-              : 'w-[265px] sm:w-[345px] md:w-[395px] h-auto'
+              ? 'w-[min(220px,78vw)] sm:w-[270px] h-auto'
+              : 'w-[min(265px,82vw)] sm:w-[345px] md:w-[395px] h-auto'
           }`}
         >
           <defs>
