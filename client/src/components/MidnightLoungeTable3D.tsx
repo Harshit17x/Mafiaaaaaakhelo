@@ -4,8 +4,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { ClientPlayerView } from '@midnight-city/shared';
 import {
   Camera,
-  Eye,
-  LayoutGrid,
   Maximize2,
   Minimize2,
   RotateCcw,
@@ -47,7 +45,7 @@ export interface MidnightLoungeTable3DProps {
   overlayBottom?: React.ReactNode;
 }
 
-type CameraPreset = 'lounge' | 'overhead' | 'my-seat';
+type CameraPreset = 'lounge' | 'my-seat';
 
 const BASE_CAMERA_FOV = 42;
 const REFERENCE_MIN_ASPECT = 1.35;
@@ -334,7 +332,6 @@ export function MidnightLoungeTable3D({
     active: false,
   });
 
-  const [compactFallback, setCompactFallback] = useState(false);
   const [webglError, setWebglError] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activePreset, setActivePreset] = useState<CameraPreset>('lounge');
@@ -390,14 +387,6 @@ export function MidnightLoungeTable3D({
   const applyCameraPreset = useCallback(
     (preset: CameraPreset) => {
       setActivePreset(preset);
-      if (preset === 'overhead') {
-        cameraGoalRef.current = {
-          pos: new THREE.Vector3(0, 10.6, 0.85),
-          target: new THREE.Vector3(0, 0.75, 0),
-          active: true,
-        };
-        return;
-      }
       if (preset === 'my-seat') {
         const myHandle = seatHandlesRef.current.get(myPlayerId);
         if (myHandle) {
@@ -425,7 +414,7 @@ export function MidnightLoungeTable3D({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || compactFallback) return;
+    if (!container) return;
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -1363,7 +1352,7 @@ export function MidnightLoungeTable3D({
       cardBackTex.dispose();
       renderer.dispose();
     };
-  }, [compactFallback, seatKeysSignature, myPlayerId]);
+  }, [seatKeysSignature, myPlayerId]);
 
   const stageHeightClass = isFullscreen
     ? 'w-screen h-screen rounded-none border-0'
@@ -1387,69 +1376,46 @@ export function MidnightLoungeTable3D({
             <span className="text-cream-400">• {centerSubtitle}</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {!compactFallback && !webglError && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => applyCameraPreset('lounge')}
-                  className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
-                    activePreset === 'lounge'
-                      ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
-                      : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
-                  }`}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Lounge Angle
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyCameraPreset('overhead')}
-                  className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
-                    activePreset === 'overhead'
-                      ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
-                      : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
-                  }`}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Top-Down
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyCameraPreset('my-seat')}
-                  className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
-                    activePreset === 'my-seat'
-                      ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
-                      : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  My Seat
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void toggleFullscreen()}
-                  className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                  Fullscreen
-                </button>
-              </>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setCompactFallback((v) => !v)}
-              className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              {compactFallback ? '3D Round Table' : 'Card Grid'}
-            </button>
-          </div>
+          {!webglError && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => applyCameraPreset('lounge')}
+                className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
+                  activePreset === 'lounge'
+                    ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
+                    : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
+                }`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Lounge Angle
+              </button>
+              <button
+                type="button"
+                onClick={() => applyCameraPreset('my-seat')}
+                className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
+                  activePreset === 'my-seat'
+                    ? 'bg-gold-500/20 border-gold-400/60 text-gold-200'
+                    : 'bg-noir-900/85 hover:bg-noir-800 border-gold-500/30 text-cream-200'
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                My Seat
+              </button>
+              <button
+                type="button"
+                onClick={() => void toggleFullscreen()}
+                className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                Fullscreen
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {compactFallback || webglError ? (
+      {webglError ? (
         <div
           className={`${
             fillViewport || isFullscreen
@@ -1465,16 +1431,6 @@ export function MidnightLoungeTable3D({
                 </div>
                 <div className="text-xs text-cream-400">{centerSubtitle}</div>
               </div>
-              {!webglError && (
-                <button
-                  type="button"
-                  onClick={() => setCompactFallback(false)}
-                  className="px-3 py-1.5 rounded-lg game-hud-glass text-xs font-semibold text-gold-200 inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  Return to 3D Table
-                </button>
-              )}
             </div>
           )}
 
@@ -1596,19 +1552,6 @@ export function MidnightLoungeTable3D({
                   </button>
                   <button
                     type="button"
-                    onClick={() => applyCameraPreset('overhead')}
-                    title="Overhead Tactical View"
-                    className={`px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 transition cursor-pointer ${
-                      activePreset === 'overhead'
-                        ? 'bg-gold-500/25 text-gold-200 border border-gold-400/40'
-                        : 'text-cream-300 hover:text-cream-50'
-                    }`}
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span className="hidden md:inline">Top</span>
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => applyCameraPreset('my-seat')}
                     title="My Seat Perspective"
                     className={`px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 transition cursor-pointer ${
@@ -1622,16 +1565,6 @@ export function MidnightLoungeTable3D({
                   </button>
 
                   <span className="w-px h-4 bg-gold-500/25 mx-0.5" aria-hidden="true" />
-
-                  <button
-                    type="button"
-                    onClick={() => setCompactFallback(true)}
-                    title="Switch to 2D Card Grid"
-                    className="px-2 py-1 rounded-lg text-cream-300 hover:text-gold-200 inline-flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                    <span className="hidden xl:inline">Grid</span>
-                  </button>
 
                   <button
                     type="button"
