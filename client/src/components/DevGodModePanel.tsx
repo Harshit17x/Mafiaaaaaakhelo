@@ -106,7 +106,7 @@ export function DevGodModePanel() {
   return (
     <>
       {/* Floating Always-Accessible God Mode Quick Dock */}
-      <div className="fixed bottom-3 left-3 z-[1200] flex items-center gap-1 rounded-full bg-[#090d17]/95 backdrop-blur-md border border-gold-400/55 shadow-[0_10px_30px_rgba(0,0,0,0.85)] p-1 text-xs">
+      <div className="fixed bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 z-[1200] max-w-[calc(100vw-1.25rem)] flex items-center gap-0.5 sm:gap-1 rounded-full bg-[#090d17]/95 backdrop-blur-md border border-gold-400/55 shadow-[0_10px_30px_rgba(0,0,0,0.85)] p-1 text-xs">
         <button
           type="button"
           onClick={() => cyclePage(-1)}
@@ -121,10 +121,10 @@ export function DevGodModePanel() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           title="Open God Mode Page Studio (Shift+Alt+G)"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-noir-800 transition cursor-pointer"
+          className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full hover:bg-noir-800 transition cursor-pointer"
         >
-          <Eye className="w-3.5 h-3.5 text-gold-300" />
-          <span className="font-display font-bold uppercase tracking-wider text-gold-200 text-[11px]">
+          <Eye className="w-3.5 h-3.5 text-gold-300 shrink-0" />
+          <span className="hidden sm:inline font-display font-bold uppercase tracking-wider text-gold-200 text-[11px]">
             God Mode
           </span>
           <span
@@ -172,7 +172,7 @@ export function DevGodModePanel() {
             role="dialog"
             aria-modal="true"
             aria-label="Developer God Mode Studio"
-            className="w-full max-w-4xl max-h-[86vh] flex flex-col rounded-2xl border border-gold-400/45 bg-[#0a0f1c]/98 shadow-[0_28px_80px_rgba(0,0,0,0.92)] overflow-hidden text-cream-100"
+            className="w-full max-w-4xl max-h-[90dvh] sm:max-h-[86dvh] flex flex-col rounded-2xl border border-gold-400/45 bg-[#0a0f1c]/98 shadow-[0_28px_80px_rgba(0,0,0,0.92)] overflow-hidden text-cream-100"
           >
             {/* Studio Header */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-gold-500/25 bg-[#0f1628]">
@@ -225,11 +225,11 @@ export function DevGodModePanel() {
             </div>
 
             {/* Studio Tabs */}
-            <div className="flex items-center gap-1 px-4 pt-2.5 border-b border-gold-500/20 bg-[#0c1221]">
+            <div className="flex items-center gap-1 px-3 sm:px-4 pt-2.5 border-b border-gold-500/20 bg-[#0c1221] overflow-x-auto whitespace-nowrap shrink-0">
               <button
                 type="button"
                 onClick={() => setTab('pages')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-t-lg text-xs font-semibold uppercase tracking-wider border-b-2 transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-t-lg text-xs font-semibold uppercase tracking-wider border-b-2 transition cursor-pointer shrink-0 ${
                   tab === 'pages'
                     ? 'border-gold-400 text-gold-200 bg-[#121a2f]'
                     : 'border-transparent text-cream-400 hover:text-cream-100'
@@ -241,7 +241,7 @@ export function DevGodModePanel() {
               <button
                 type="button"
                 onClick={() => setTab('controls')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-t-lg text-xs font-semibold uppercase tracking-wider border-b-2 transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-t-lg text-xs font-semibold uppercase tracking-wider border-b-2 transition cursor-pointer shrink-0 ${
                   tab === 'controls'
                     ? 'border-gold-400 text-gold-200 bg-[#121a2f]'
                     : 'border-transparent text-cream-400 hover:text-cream-100'
@@ -253,7 +253,7 @@ export function DevGodModePanel() {
               <button
                 type="button"
                 onClick={() => setTab('inspector')}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-t-lg text-xs font-semibold uppercase tracking-wider border-b-2 transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-t-lg text-xs font-semibold uppercase tracking-wider border-b-2 transition cursor-pointer shrink-0 ${
                   tab === 'inspector'
                     ? 'border-gold-400 text-gold-200 bg-[#121a2f]'
                     : 'border-transparent text-cream-400 hover:text-cream-100'

@@ -178,11 +178,11 @@ export function VoiceControlsBar({
   const otherPlayers = room.players.filter((p) => p.id !== room.myPlayerId);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pt-3 space-y-2">
-      <div className="noir-card rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex flex-wrap items-center gap-2.5">
+    <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 pt-2 sm:pt-3 space-y-2">
+      <div className="noir-card rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <span className="inline-flex items-center gap-1.5 font-display uppercase tracking-wider text-gold-300 font-semibold">
-            <Radio className="w-4 h-4" aria-hidden="true" />
+            <Radio className="w-4 h-4 shrink-0" aria-hidden="true" />
             {channelLabel}
           </span>
 
@@ -191,7 +191,7 @@ export function VoiceControlsBar({
               type="button"
               disabled={joining}
               onClick={() => void handleJoinVoice()}
-              className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50"
+              className="px-3 sm:px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50"
             >
               <PhoneCall className="w-3.5 h-3.5" />
               {joining ? 'Connecting Mic...' : 'Join Voice'}
@@ -203,7 +203,7 @@ export function VoiceControlsBar({
                   type="button"
                   disabled={!canSpeak}
                   onClick={() => setOpenMicMuted((m) => !m)}
-                  className={`px-3 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 border transition ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 border transition ${
                     !canSpeak
                       ? 'bg-noir-900 border-noir-700 text-cream-600'
                       : effectiveLocalMuted
@@ -217,7 +217,7 @@ export function VoiceControlsBar({
                     <Mic className="w-3.5 h-3.5" />
                   )}
                   {!canSpeak
-                    ? 'Silenced by Phase'
+                    ? 'Silenced'
                     : effectiveLocalMuted
                       ? 'Muted'
                       : 'Mic Live'}
@@ -229,7 +229,10 @@ export function VoiceControlsBar({
                   onPointerDown={() => setPttPressed(true)}
                   onPointerUp={() => setPttPressed(false)}
                   onPointerLeave={() => setPttPressed(false)}
-                  className={`px-4 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 border select-none touch-none transition ${
+                  onPointerCancel={() => setPttPressed(false)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  style={{ WebkitTouchCallout: 'none' }}
+                  className={`px-3 sm:px-4 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 border select-none touch-none transition ${
                     !canSpeak
                       ? 'bg-noir-900 border-noir-700 text-cream-600'
                       : pttPressed
@@ -238,7 +241,16 @@ export function VoiceControlsBar({
                   }`}
                 >
                   <Mic className="w-3.5 h-3.5" />
-                  {!canSpeak ? 'Silenced' : pttPressed ? 'Transmitting...' : 'Hold to Talk (Space)'}
+                  {!canSpeak ? (
+                    'Silenced'
+                  ) : pttPressed ? (
+                    'Transmitting...'
+                  ) : (
+                    <>
+                      <span>Hold to Talk</span>
+                      <span className="hidden sm:inline">(Space)</span>
+                    </>
+                  )}
                 </button>
               )}
 
@@ -247,7 +259,8 @@ export function VoiceControlsBar({
                 onClick={() => setPttMode((v) => !v)}
                 className="px-2.5 py-1.5 rounded-lg bg-noir-800 hover:bg-noir-700 border border-gold-500/30 text-cream-200"
               >
-                Mode: {pttMode ? 'Push-to-Talk' : 'Open Mic'}
+                <span className="hidden sm:inline">Mode: </span>
+                {pttMode ? 'Push-to-Talk' : 'Open Mic'}
               </button>
 
               <button
@@ -265,7 +278,7 @@ export function VoiceControlsBar({
                 className="px-2.5 py-1.5 rounded-lg bg-crimson-950/80 hover:bg-crimson-900 border border-crimson-500/40 text-crimson-200 inline-flex items-center gap-1"
               >
                 <PhoneOff className="w-3.5 h-3.5" />
-                Disconnect
+                <span className="hidden sm:inline">Disconnect</span>
               </button>
             </>
           )}
@@ -311,8 +324,8 @@ export function VoiceControlsBar({
                   key={p.id}
                   className="flex items-center justify-between gap-2 rounded-lg bg-noir-900/75 border border-gold-500/20 px-2.5 py-2"
                 >
-                  <span className="truncate text-cream-100 max-w-[6.5rem]">{p.name}</span>
-                  <div className="flex items-center gap-2">
+                  <span className="truncate text-cream-100 flex-1 min-w-0">{p.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -321,7 +334,7 @@ export function VoiceControlsBar({
                         providerRef.current?.setPeerLocalMuted(p.id, next);
                       }}
                       aria-label={isMuted ? `Unmute ${p.name}` : `Mute ${p.name}`}
-                      className="p-1 rounded hover:bg-noir-800 text-cream-300"
+                      className="p-1.5 sm:p-1 rounded hover:bg-noir-800 text-cream-300"
                     >
                       {isMuted ? (
                         <VolumeX className="w-4 h-4 text-crimson-400" />
@@ -341,7 +354,7 @@ export function VoiceControlsBar({
                         providerRef.current?.setPeerVolume(p.id, v);
                       }}
                       aria-label={`Volume for ${p.name}`}
-                      className="w-20 accent-gold-500"
+                      className="w-24 sm:w-20 accent-gold-500"
                     />
                   </div>
                 </div>

@@ -95,13 +95,13 @@ export function GodViewPanel() {
       aria-label="Host God View Panel"
       className="noir-card border-2 border-gold-400/55 rounded-2xl overflow-hidden shadow-[0_12px_40px_rgba(212,168,79,0.16)]"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gold-500/15 border-b border-gold-500/30">
-        <div className="flex items-center gap-2">
-          <Eye className="w-5 h-5 text-gold-300" aria-hidden="true" />
-          <h2 className="font-display text-sm sm:text-base font-bold uppercase tracking-wider text-gold-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-gold-500/15 border-b border-gold-500/30">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-gold-300 shrink-0" aria-hidden="true" />
+          <h2 className="font-display text-xs sm:text-base font-bold uppercase tracking-wider text-gold-200">
             Narrator God View
           </h2>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-noir-950/80 border border-gold-500/40 text-gold-300 font-mono">
+          <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full bg-noir-950/80 border border-gold-500/40 text-gold-300 font-mono">
             {game.phase === 'NIGHT' ? god.actualNightSubPhase : game.phase}
           </span>
         </div>
@@ -125,12 +125,12 @@ export function GodViewPanel() {
       </div>
 
       {!collapsed && (
-        <div className="p-4 sm:p-5 space-y-5">
-          <div className="rounded-xl bg-noir-950/80 border border-gold-500/30 p-3.5 text-sm text-gold-100">
+        <div className="p-3 sm:p-5 space-y-4 sm:space-y-5">
+          <div className="rounded-xl bg-noir-950/80 border border-gold-500/30 p-3 sm:p-3.5 text-sm text-gold-100">
             <div className="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold mb-1">
               Narrator Prompt
             </div>
-            <p className="font-serif italic text-base">{getNarratorScript()}</p>
+            <p className="font-serif italic text-sm sm:text-base">{getNarratorScript()}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -312,7 +312,7 @@ export function GodViewPanel() {
             <div className="text-xs font-semibold uppercase tracking-wider text-gold-300">
               All Player Dossiers
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-1 min-[380px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
               {playingPlayers.map((p) => {
                 const role = p.role ?? 'VILLAGER';
                 const meta = ROLE_META[role];
@@ -321,7 +321,7 @@ export function GodViewPanel() {
                 return (
                   <div
                     key={p.id}
-                    className={`rounded-xl p-2.5 border flex items-center gap-2 ${
+                    className={`rounded-xl p-2 sm:p-2.5 border flex items-center gap-2 ${
                       !p.isAlive
                         ? 'bg-noir-950/70 border-noir-800 opacity-55'
                         : isAwake

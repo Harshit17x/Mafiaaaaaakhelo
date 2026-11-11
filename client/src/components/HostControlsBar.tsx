@@ -21,8 +21,8 @@ export function HostControlsBar() {
   const hasDisconnected = room.players.some((p) => p.isPlaying && !p.connected);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pt-3">
-      <div className="rounded-xl bg-noir-900/85 border border-gold-500/30 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+    <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 pt-2 sm:pt-3">
+      <div className="rounded-xl bg-noir-900/85 border border-gold-500/30 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="font-display uppercase tracking-wider text-gold-300 font-semibold">
           Host Controls
         </span>
