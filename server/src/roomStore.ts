@@ -1,5 +1,11 @@
 import { DEFAULT_ROOM_SETTINGS } from '@midnight-city/shared';
-import type { ChatMessage, GameState, RoomSettings, ServerPlayer } from '@midnight-city/shared';
+import type {
+  ChatMessage,
+  GameState,
+  LobbyCharacterPosition,
+  RoomSettings,
+  ServerPlayer,
+} from '@midnight-city/shared';
 import { createInitialGameState } from './engine/index.js';
 
 export interface ServerRoom {
@@ -8,11 +14,29 @@ export interface ServerRoom {
   mafiaCountManualOverride: boolean;
   settings: RoomSettings;
   players: ServerPlayer[];
+  lobbyPositions: Record<string, LobbyCharacterPosition>;
   game: GameState;
   chatHistory: ChatMessage[];
   createdAt: number;
   lastActivityAt: number;
   hostDisconnectedAt: number | null;
+}
+
+export function getInitialLobbySpawn(
+  slotIndex: number,
+  now: number = Date.now()
+): LobbyCharacterPosition {
+  const angle = ((slotIndex % 16) / 8) * Math.PI - Math.PI / 2;
+  const ringRadius = slotIndex >= 8 ? 165 : 115;
+  const x = Math.round(480 + Math.cos(angle) * ringRadius);
+  const y = Math.round(335 + Math.sin(angle) * (ringRadius * 0.65));
+  return {
+    x,
+    y,
+    facing: x > 480 ? 'left' : 'right',
+    moving: false,
+    updatedAt: now,
+  };
 }
 
 export interface RoomRepository {
@@ -53,6 +77,9 @@ export function createRoomRecord(
     mafiaCountManualOverride: false,
     settings: { ...DEFAULT_ROOM_SETTINGS },
     players: [hostPlayer],
+    lobbyPositions: {
+      [hostPlayer.id]: getInitialLobbySpawn(0, now),
+    },
     game: createInitialGameState(now),
     chatHistory: [],
     createdAt: now,

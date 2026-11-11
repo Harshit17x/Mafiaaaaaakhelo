@@ -324,6 +324,7 @@ export function buildClientRoomView(
     paused: room.game.paused,
     pauseReason: room.game.pauseReason,
     phaseEndsAt: room.game.phaseEndsAt,
+    lobbyCountdownEndsAt: room.game.lobbyCountdownEndsAt,
     myRole: viewer?.role ?? null,
     myRoleAcknowledged: viewer?.roleAcknowledged ?? false,
     fellowMafiaIds,
@@ -345,6 +346,7 @@ export function buildClientRoomView(
     settings: { ...room.settings },
     validation,
     players,
+    lobbyPositions: { ...room.lobbyPositions },
     game,
     serverTime: now,
   };

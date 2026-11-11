@@ -299,4 +299,65 @@
     inset 0 1px 0 rgba(245, 223, 176, 0.16);
 }
 
+@keyframes lobbyWalkBob {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-2.5deg);
+  }
+  75% {
+    transform: translateY(-3px) rotate(2.5deg);
+  }
+}
+
+@keyframes lobbyFootA {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes lobbyFootB {
+  0%,
+  100% {
+    transform: translateY(-4px);
+  }
+  50% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes lobbyIdleBreathe {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-1.2px);
+  }
+}
+
+.animate-lobby-bob {
+  animation: lobbyWalkBob 0.36s ease-in-out infinite;
+  transform-origin: 32px 66px;
+}
+
+.animate-lobby-idle {
+  animation: lobbyIdleBreathe 2.6s ease-in-out infinite;
+}
+
+.animate-lobby-foot-a {
+  animation: lobbyFootA 0.36s ease-in-out infinite;
+}
+
+.animate-lobby-foot-b {
+  animation: lobbyFootB 0.36s ease-in-out infinite;
+}
+
+
 

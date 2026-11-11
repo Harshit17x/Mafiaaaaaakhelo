@@ -6,9 +6,8 @@ import {
   Play,
   Unlock,
 } from 'lucide-react';
-import { AvatarPolaroidCard } from '../components/AvatarPolaroidCard';
 import { ChatPanel } from '../components/ChatPanel';
-import { MidnightLoungeTable3D } from '../components/MidnightLoungeTable3D';
+import { LobbyWaitingLounge } from '../components/LobbyWaitingLounge';
 import { useGameStore } from '../stores/useGameStore';
 
 export function LobbyPage({
@@ -17,13 +16,16 @@ export function LobbyPage({
   speakingPeerIds?: Set<string>;
 }) {
   const room = useGameStore((s) => s.room);
+  const lobbyPositions = useGameStore((s) => s.lobbyPositions);
   const setReady = useGameStore((s) => s.setReady);
   const kickPlayer = useGameStore((s) => s.kickPlayer);
   const transferHost = useGameStore((s) => s.transferHost);
   const toggleLock = useGameStore((s) => s.toggleLock);
   const startGame = useGameStore((s) => s.startGame);
-  const myAvatar = useGameStore((s) => s.myAvatar);
+  const sendLobbyMove = useGameStore((s) => s.sendLobbyMove);
   const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
+  const avatarOpen = useGameStore((s) => s.avatarOpen);
+  const rulesOpen = useGameStore((s) => s.rulesOpen);
 
   const [copied, setCopied] = useState(false);
 
@@ -53,7 +55,9 @@ export function LobbyPage({
     ? (validation.errors[0] ?? 'Waiting for valid player setup')
     : !allPlayingReady
       ? `Waiting for ${notReadyCount} player${notReadyCount === 1 ? '' : 's'} to mark Ready`
-      : null;
+      : room.game.lobbyCountdownEndsAt !== null
+        ? 'All players ready — countdown started!'
+        : null;
 
   return (
     <div className="relative z-10 max-w-6xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-5">
@@ -88,21 +92,6 @@ export function LobbyPage({
 
         <div className="flex flex-col items-start sm:items-end gap-1.5 w-full lg:w-auto">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setAvatarOpen(true)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gold-500/40 bg-noir-900/80 hover:bg-noir-800 text-xs font-semibold text-gold-200 transition cursor-pointer"
-            >
-              <AvatarPolaroidCard
-                avatar={me?.avatar ?? myAvatar}
-                size="xs"
-                showPin={false}
-                tiltOverride={-2}
-                className="!w-7 !p-0.5 !pb-1"
-              />
-              <span>Edit Avatar</span>
-            </button>
-
             {isHost && (
               <button
                 type="button"
@@ -152,21 +141,21 @@ export function LobbyPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_19.5rem] xl:grid-cols-[minmax(0,1fr)_21.5rem] gap-4 sm:gap-5 items-stretch">
         <div className="min-w-0">
-          <MidnightLoungeTable3D
+          <LobbyWaitingLounge
             players={room.players}
             myPlayerId={room.myPlayerId}
-            mode="LOBBY"
             viewerIsHost={isHost}
             speakingPeerIds={speakingPeerIds}
-            accuseCounts={new Map()}
-            myAccuseTargetId={null}
-            selectedVoteTarget={null}
-            canAccuse={false}
-            canVoteCandidate={() => false}
+            lobbyPositions={lobbyPositions}
+            lobbyCountdownEndsAt={room.game.lobbyCountdownEndsAt}
+            serverTime={room.serverTime}
+            validationValid={validation.valid}
+            validationError={validation.errors[0] ?? null}
+            modalOpen={avatarOpen || rulesOpen}
+            onMove={sendLobbyMove}
+            onOpenCustomization={() => setAvatarOpen(true)}
             onTransferHost={(id) => void transferHost(id)}
             onKickPlayer={(id) => void kickPlayer(id)}
-            centerTitle={`Lounge Cushions (${playingPlayers.length}/16 Seated)`}
-            centerSubtitle="5–16 players required • Chill and chat while gathering"
           />
         </div>
 

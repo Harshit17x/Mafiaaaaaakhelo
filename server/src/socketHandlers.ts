@@ -101,6 +101,9 @@ export function createSocketIoEmitter(
     emitVoiceSignal(socketId, payload) {
       io.to(socketId).emit('voice:signal', payload);
     },
+    emitLobbyPositions(roomCode, positions) {
+      io.to(roomCode).emit('lobby:positions', positions);
+    },
     joinSocketRoom(socketId, roomCode) {
       const sock = io.sockets.sockets.get(socketId);
       if (sock) {
@@ -327,10 +330,20 @@ export function registerSocketHandlers(
       }
     });
 
+    socket.on('lobby:move', (payload) => {
+      if (!rateLimiter.allow(`move:${socket.id}`, 200, 5000)) {
+        return;
+      }
+      if (payload) {
+        manager.moveLobbyCharacter(socket.id, payload);
+      }
+    });
+
     socket.on('disconnect', () => {
       rateLimiter.clearPrefix(`gen:${socket.id}`);
       rateLimiter.clearPrefix(`chat:${socket.id}`);
       rateLimiter.clearPrefix(`sig:${socket.id}`);
+      rateLimiter.clearPrefix(`move:${socket.id}`);
       manager.handleDisconnect(socket.id);
       statsBroadcaster?.broadcastIfChanged();
     });

@@ -5,7 +5,6 @@ import { soundEngine } from './audio/SoundEngine';
 import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
 import { AvatarPanelModal } from './components/AvatarPanelModal';
-import { AvatarPolaroidCard } from './components/AvatarPolaroidCard';
 import { GodViewPanel } from './components/GodViewPanel';
 import { HostControlsBar } from './components/HostControlsBar';
 import { LivePlayersBadge } from './components/LivePlayersBadge';
@@ -34,8 +33,6 @@ export function App() {
   const leaveRoom = useGameStore((s) => s.leaveRoom);
   const rulesOpen = useGameStore((s) => s.rulesOpen);
   const setRulesOpen = useGameStore((s) => s.setRulesOpen);
-  const myAvatar = useGameStore((s) => s.myAvatar);
-  const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
   const mutedAudio = useGameStore((s) => s.mutedAudio);
   const volume = useGameStore((s) => s.volume);
   const lastNarration = useGameStore((s) => s.lastNarration);
@@ -143,24 +140,6 @@ export function App() {
 
               <RolePeekChip />
               <AudioControls />
-
-              <button
-                type="button"
-                onClick={() => setAvatarOpen(true)}
-                title="Customize Avatar"
-                className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-lg text-xs font-medium text-gold-200 hover:text-gold-100 bg-noir-900/75 hover:bg-noir-800 border border-gold-500/30 transition cursor-pointer"
-              >
-                <div className="w-6 h-7 overflow-hidden rounded-sm flex items-center justify-center">
-                  <AvatarPolaroidCard
-                    avatar={myAvatar}
-                    size="xs"
-                    showPin={false}
-                    tiltOverride={0}
-                    className="!w-6 !p-0.5 !pb-1"
-                  />
-                </div>
-                <span className="hidden sm:inline">Avatar</span>
-              </button>
 
               <button
                 type="button"

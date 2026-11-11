@@ -188,6 +188,14 @@ export interface TimelineVoteEntry {
 
 export type GameTimelineEntry = TimelineNightEntry | TimelineVoteEntry;
 
+export interface LobbyCharacterPosition {
+  x: number;
+  y: number;
+  facing: 'left' | 'right';
+  moving: boolean;
+  updatedAt: number;
+}
+
 export interface GameState {
   phase: GamePhase;
   roundNumber: number;
@@ -195,6 +203,7 @@ export interface GameState {
   pauseReason: string | null;
   phaseStartedAt: number;
   phaseEndsAt: number | null;
+  lobbyCountdownEndsAt: number | null;
   pausedRemainingMs: number | null;
   healerSelfSaveCount: number;
   healerSavedSelfLastNight: boolean;
@@ -305,6 +314,7 @@ export interface ClientGameState {
   paused: boolean;
   pauseReason: string | null;
   phaseEndsAt: number | null;
+  lobbyCountdownEndsAt: number | null;
   myRole: Role | null;
   myRoleAcknowledged: boolean;
   fellowMafiaIds: string[];
@@ -326,6 +336,7 @@ export interface ClientRoomView {
   settings: RoomSettings;
   validation: SettingsValidationResult;
   players: ClientPlayerView[];
+  lobbyPositions: Record<string, LobbyCharacterPosition>;
   game: ClientGameState;
   serverTime: number;
 }

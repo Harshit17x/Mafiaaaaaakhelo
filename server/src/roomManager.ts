@@ -4,6 +4,9 @@ import {
   DEFAULT_TIMINGS,
   DISCONNECT_GRACE_MS,
   HOST_AUTO_TRANSFER_GRACE_MS,
+  LOBBY_ARENA_HEIGHT,
+  LOBBY_ARENA_WIDTH,
+  LOBBY_COUNTDOWN_MS,
   MAX_PLAYERS,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
@@ -14,6 +17,7 @@ import {
   sanitizeChatMessage,
   sanitizePlayerName,
   sanitizeRoomSettingsPatch,
+  validateSettings,
 } from '@midnight-city/shared';
 import type {
   AckResponse,
@@ -21,6 +25,7 @@ import type {
   ChatMessage,
   ClientRoomView,
   JoinSuccessPayload,
+  LobbyCharacterPosition,
   NightSubPhase,
   PlayerAvatarConfig,
   RoomSettings,
@@ -50,7 +55,7 @@ import {
   toggleReadyToVote,
 } from './engine/index.js';
 import type { EngineEvent, EngineTimings, RandomIntFn } from './engine/index.js';
-import { createRoomRecord } from './roomStore.js';
+import { createRoomRecord, getInitialLobbySpawn } from './roomStore.js';
 import type { RoomRepository, ServerRoom } from './roomStore.js';
 import {
   buildClientRoomView,
@@ -70,6 +75,10 @@ export interface RoomEmitter {
     socketId: string,
     payload: { fromPlayerId: string; signal: VoiceSignalPayload }
   ): void;
+  emitLobbyPositions(
+    roomCode: string,
+    positions: Record<string, LobbyCharacterPosition>
+  ): void;
   joinSocketRoom(socketId: string, roomCode: string): void;
   leaveSocketRoom(socketId: string, roomCode: string): void;
   onStatsChanged?: () => void;
@@ -81,6 +90,7 @@ export interface RoomManagerOptions {
   timings?: EngineTimings;
   disconnectGraceMs?: number;
   hostAutoTransferGraceMs?: number;
+  lobbyCountdownMs?: number;
   roomInactivityTtlMs?: number;
   randInt?: RandomIntFn;
   now?: () => number;
@@ -97,6 +107,7 @@ export class RoomManager {
   private readonly timings: EngineTimings;
   private readonly disconnectGraceMs: number;
   private readonly hostAutoTransferGraceMs: number;
+  private readonly lobbyCountdownMs: number;
   private readonly roomInactivityTtlMs: number;
   private readonly randInt: RandomIntFn;
   private readonly now: () => number;
@@ -112,6 +123,7 @@ export class RoomManager {
     this.disconnectGraceMs = options.disconnectGraceMs ?? DISCONNECT_GRACE_MS;
     this.hostAutoTransferGraceMs =
       options.hostAutoTransferGraceMs ?? HOST_AUTO_TRANSFER_GRACE_MS;
+    this.lobbyCountdownMs = options.lobbyCountdownMs ?? LOBBY_COUNTDOWN_MS;
     this.roomInactivityTtlMs = options.roomInactivityTtlMs ?? ROOM_INACTIVITY_TTL_MS;
     this.randInt = options.randInt ?? cryptoRandomInt;
     this.now = options.now ?? (() => Date.now());
@@ -196,6 +208,35 @@ export class RoomManager {
       room.settings = {
         ...room.settings,
         mafiaCount: getSuggestedMafiaCount(playingCount),
+      };
+    }
+  }
+
+  private syncLobbyCountdown(room: ServerRoom, currentNow: number): void {
+    if (room.game.phase !== 'LOBBY') {
+      if (room.game.lobbyCountdownEndsAt !== null) {
+        room.game = { ...room.game, lobbyCountdownEndsAt: null };
+      }
+      return;
+    }
+    const playingPlayers = room.players.filter((p) => p.isPlaying);
+    const validation = validateSettings(playingPlayers.length, room.settings);
+    const allReady = playingPlayers.length > 0 && playingPlayers.every((p) => p.isReady);
+    const hostReady =
+      room.settings.narratorMode !== 'HUMAN_HOST' ||
+      Boolean(room.players.find((p) => p.isHost)?.connected);
+
+    if (validation.valid && allReady && hostReady) {
+      if (room.game.lobbyCountdownEndsAt === null) {
+        room.game = {
+          ...room.game,
+          lobbyCountdownEndsAt: currentNow + this.lobbyCountdownMs,
+        };
+      }
+    } else if (room.game.lobbyCountdownEndsAt !== null) {
+      room.game = {
+        ...room.game,
+        lobbyCountdownEndsAt: null,
       };
     }
   }
@@ -325,8 +366,13 @@ export class RoomManager {
     };
 
     room.players = [...room.players, newPlayer];
+    room.lobbyPositions = {
+      ...room.lobbyPositions,
+      [playerId]: getInitialLobbySpawn(room.players.length - 1, currentNow),
+    };
     room.lastActivityAt = currentNow;
     this.syncMafiaSuggestedCountIfUnset(room);
+    this.syncLobbyCountdown(room, currentNow);
     this.bindSocket(socketId, roomCode, playerId);
     this.broadcastRoom(room);
     this.emitter.emitChatHistory(socketId, filterChatHistoryForPlayer(room, playerId));
@@ -373,6 +419,7 @@ export class RoomManager {
     }
 
     room.lastActivityAt = currentNow;
+    this.syncLobbyCountdown(room, currentNow);
     this.bindSocket(socketId, roomCode, existing.id);
     this.broadcastRoom(room);
     this.emitter.emitChatHistory(socketId, filterChatHistoryForPlayer(room, existing.id));
@@ -432,7 +479,19 @@ export class RoomManager {
       }
     }
 
+    if (room.game.phase === 'LOBBY' && room.lobbyPositions[player.id]) {
+      room.lobbyPositions = {
+        ...room.lobbyPositions,
+        [player.id]: {
+          ...room.lobbyPositions[player.id]!,
+          moving: false,
+          updatedAt: currentNow,
+        },
+      };
+    }
+
     room.lastActivityAt = currentNow;
+    this.syncLobbyCountdown(room, currentNow);
     this.broadcastRoom(room);
   }
 
@@ -450,6 +509,9 @@ export class RoomManager {
 
     if (room.game.phase === 'LOBBY' || room.game.phase === 'GAME_OVER') {
       room.players = room.players.filter((p) => p.id !== player.id);
+      const nextPositions = { ...room.lobbyPositions };
+      delete nextPositions[player.id];
+      room.lobbyPositions = nextPositions;
       if (room.players.length === 0) {
         this.repo.delete(room.roomCode);
         this.pausedAtByRoom.delete(room.roomCode);
@@ -473,6 +535,7 @@ export class RoomManager {
       }
 
       this.syncMafiaSuggestedCountIfUnset(room);
+      this.syncLobbyCountdown(room, currentNow);
       room.lastActivityAt = currentNow;
       this.broadcastRoom(room);
       return { ok: true };
@@ -527,12 +590,57 @@ export class RoomManager {
     if (!player.isPlaying) {
       return { ok: false, error: 'Narrator does not mark ready.' };
     }
+    const currentNow = this.now();
     room.players = room.players.map((p) =>
       p.id === player.id ? { ...p, isReady: ready } : p
     );
-    room.lastActivityAt = this.now();
+    this.syncLobbyCountdown(room, currentNow);
+    room.lastActivityAt = currentNow;
     this.broadcastRoom(room);
     return { ok: true };
+  }
+
+  moveLobbyCharacter(
+    socketId: string,
+    payload: { x?: unknown; y?: unknown; facing?: unknown; moving?: unknown }
+  ): void {
+    const ctx = this.getMemberContext(socketId);
+    if (!ctx) {
+      return;
+    }
+    const { room, player } = ctx;
+    if (room.game.phase !== 'LOBBY') {
+      return;
+    }
+
+    const currentNow = this.now();
+    const prev = room.lobbyPositions[player.id] ?? getInitialLobbySpawn(0, currentNow);
+    const rawX =
+      typeof payload?.x === 'number' && Number.isFinite(payload.x) ? payload.x : prev.x;
+    const rawY =
+      typeof payload?.y === 'number' && Number.isFinite(payload.y) ? payload.y : prev.y;
+    const x =
+      Math.round(Math.max(55, Math.min(LOBBY_ARENA_WIDTH - 55, rawX)) * 10) / 10;
+    const y =
+      Math.round(Math.max(115, Math.min(LOBBY_ARENA_HEIGHT - 45, rawY)) * 10) / 10;
+    const facing =
+      payload?.facing === 'left' || payload?.facing === 'right'
+        ? payload.facing
+        : prev.facing;
+    const moving = Boolean(payload?.moving);
+
+    room.lobbyPositions = {
+      ...room.lobbyPositions,
+      [player.id]: {
+        x,
+        y,
+        facing,
+        moving,
+        updatedAt: currentNow,
+      },
+    };
+    room.lastActivityAt = currentNow;
+    this.emitter.emitLobbyPositions(room.roomCode, room.lobbyPositions);
   }
 
   updatePlayerAvatar(socketId: string, rawAvatar: unknown): AckResponse {
@@ -584,11 +692,13 @@ export class RoomManager {
       };
     });
 
+    const currentNow = this.now();
     if (partial.narratorMode !== undefined) {
       this.syncMafiaSuggestedCountIfUnset(room);
     }
+    this.syncLobbyCountdown(room, currentNow);
 
-    room.lastActivityAt = this.now();
+    room.lastActivityAt = currentNow;
     this.broadcastRoom(room);
     return { ok: true };
   }
@@ -621,7 +731,11 @@ export class RoomManager {
     const currentNow = this.now();
     if (room.game.phase === 'LOBBY' || room.game.phase === 'GAME_OVER') {
       room.players = room.players.filter((p) => p.id !== targetPlayerId);
+      const nextPositions = { ...room.lobbyPositions };
+      delete nextPositions[targetPlayerId];
+      room.lobbyPositions = nextPositions;
       this.syncMafiaSuggestedCountIfUnset(room);
+      this.syncLobbyCountdown(room, currentNow);
       room.lastActivityAt = currentNow;
       this.broadcastRoom(room);
       return { ok: true };
@@ -698,8 +812,10 @@ export class RoomManager {
       return p;
     });
 
+    const currentNow = this.now();
     room.hostDisconnectedAt = null;
-    room.lastActivityAt = this.now();
+    this.syncLobbyCountdown(room, currentNow);
+    room.lastActivityAt = currentNow;
     this.broadcastRoom(room);
     return { ok: true };
   }
@@ -940,6 +1056,9 @@ export class RoomManager {
     const reset = resetToLobby(room.players, room.settings, currentNow);
     room.players = reset.players;
     room.game = reset.game;
+    room.lobbyPositions = Object.fromEntries(
+      reset.players.map((p, idx) => [p.id, getInitialLobbySpawn(idx, currentNow)])
+    );
     room.lastActivityAt = currentNow;
     this.pausedAtByRoom.delete(room.roomCode);
     this.broadcastRoom(room);
@@ -1385,6 +1504,29 @@ export class RoomManager {
                 : p
           );
           room.hostDisconnectedAt = null;
+          changed = true;
+        }
+      }
+
+      if (
+        room.game.phase === 'LOBBY' &&
+        room.game.lobbyCountdownEndsAt !== null &&
+        currentNow >= room.game.lobbyCountdownEndsAt
+      ) {
+        const startRes = startGame(
+          room.players,
+          room.game,
+          room.settings,
+          currentNow,
+          this.randInt
+        );
+        if (startRes.ok) {
+          room.players = startRes.players;
+          room.game = startRes.game;
+          events = events.concat(startRes.events);
+          changed = true;
+        } else {
+          room.game = { ...room.game, lobbyCountdownEndsAt: null };
           changed = true;
         }
       }

@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   ClientRoomView,
   LiveServerStats,
+  LobbyCharacterPosition,
   NightSubPhase,
   PlayerAvatarConfig,
   RoomSettings,
@@ -130,6 +131,12 @@ export interface ClientToServerEvents {
     callback: (res: AckResponse) => void
   ) => void;
   'voice:signal': (payload: { toPlayerId: string; signal: VoiceSignalPayload }) => void;
+  'lobby:move': (payload: {
+    x: number;
+    y: number;
+    facing: 'left' | 'right';
+    moving: boolean;
+  }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -142,4 +149,5 @@ export interface ServerToClientEvents {
   'voice:signal': (payload: { fromPlayerId: string; signal: VoiceSignalPayload }) => void;
   'narration:cue': (payload: { key: string; text: string }) => void;
   'server:stats': (stats: LiveServerStats) => void;
+  'lobby:positions': (positions: Record<string, LobbyCharacterPosition>) => void;
 }

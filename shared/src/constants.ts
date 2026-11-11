@@ -15,6 +15,9 @@ export const SKIP_VOTE_TARGET = '__SKIP__';
 export const DISCONNECT_GRACE_MS = 60_000;
 export const HOST_AUTO_TRANSFER_GRACE_MS = 15_000;
 export const ROOM_INACTIVITY_TTL_MS = 2 * 60 * 60 * 1000;
+export const LOBBY_COUNTDOWN_MS = 5_000;
+export const LOBBY_ARENA_WIDTH = 1000;
+export const LOBBY_ARENA_HEIGHT = 600;
 
 export const DEFAULT_TIMINGS = {
   SLEEP_TRANSITION_MS: 3000,

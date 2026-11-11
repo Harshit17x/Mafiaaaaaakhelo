@@ -11,6 +11,7 @@ import type {
   ChatMessage,
   ClientRoomView,
   LiveServerStats,
+  LobbyCharacterPosition,
   NightSubPhase,
   PlayerAvatarConfig,
   RoomSettings,
@@ -28,12 +29,19 @@ import type { TypedGameSocket } from '../services/socket';
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 export type AvatarFlowTarget = 'create' | 'join' | null;
 
+export interface CustomAvatarEntry {
+  id: string;
+  label: string;
+  dataUrl: string;
+}
+
 interface GameStoreState {
   socket: TypedGameSocket | null;
   connectionStatus: ConnectionStatus;
   isRestoringSession: boolean;
   liveStats: LiveServerStats | null;
   room: ClientRoomView | null;
+  lobbyPositions: Record<string, LobbyCharacterPosition>;
   voiceState: VoiceState | null;
   chatMessages: ChatMessage[];
   errorBanner: string | null;
@@ -44,6 +52,7 @@ interface GameStoreState {
   avatarFlowTarget: AvatarFlowTarget;
   avatarCompletedTarget: AvatarFlowTarget;
   myAvatar: PlayerAvatarConfig;
+  savedCustomAvatars: CustomAvatarEntry[];
   pendingRoomSettings: RoomSettings;
   mutedAudio: boolean;
   volume: number;
@@ -56,6 +65,14 @@ interface GameStoreState {
   completeAvatarFlow: () => void;
   clearCompletedAvatarFlow: () => void;
   updateAvatar: (avatar: PlayerAvatarConfig) => Promise<boolean>;
+  addCustomAvatar: (dataUrl: string, label?: string) => CustomAvatarEntry;
+  deleteCustomAvatar: (id: string) => Promise<void>;
+  sendLobbyMove: (pos: {
+    x: number;
+    y: number;
+    facing: 'left' | 'right';
+    moving: boolean;
+  }) => void;
   setPendingRoomSettings: (partial: Partial<RoomSettings>) => void;
   resetPendingRoomSettings: () => void;
   setMutedAudio: (muted: boolean) => void;
@@ -119,6 +136,7 @@ function saveAudioPrefs(muted: boolean, volume: number): void {
 }
 
 const AVATAR_STORAGE_KEY = 'midnight_city_avatar_v1';
+const CUSTOM_AVATARS_STORAGE_KEY = 'midnight_city_custom_avatars_v1';
 
 function loadAvatarPrefs(): PlayerAvatarConfig {
   try {
@@ -138,8 +156,54 @@ function saveAvatarPrefs(avatar: PlayerAvatarConfig): void {
   }
 }
 
+function loadSavedCustomAvatars(activeAvatar: PlayerAvatarConfig): CustomAvatarEntry[] {
+  let list: CustomAvatarEntry[] = [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_AVATARS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) {
+        list = parsed
+          .filter(
+            (item): item is CustomAvatarEntry =>
+              Boolean(item) &&
+              typeof item === 'object' &&
+              typeof (item as CustomAvatarEntry).id === 'string' &&
+              typeof (item as CustomAvatarEntry).dataUrl === 'string' &&
+              (item as CustomAvatarEntry).dataUrl.startsWith('data:image/')
+          )
+          .slice(0, 8);
+      }
+    }
+  } catch {
+  }
+  if (
+    activeAvatar.presetId === 'custom' &&
+    activeAvatar.customDataUrl &&
+    !list.some((item) => item.dataUrl === activeAvatar.customDataUrl)
+  ) {
+    list = [
+      {
+        id: 'custom-active',
+        label: activeAvatar.caption || 'Custom Photo',
+        dataUrl: activeAvatar.customDataUrl,
+      },
+      ...list,
+    ].slice(0, 8);
+  }
+  return list;
+}
+
+function saveCustomAvatars(list: CustomAvatarEntry[]): void {
+  try {
+    localStorage.setItem(CUSTOM_AVATARS_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+  }
+}
+
 const initialAudio = loadAudioPrefs();
 const initialAvatar = loadAvatarPrefs();
+const initialSavedCustomAvatars = loadSavedCustomAvatars(initialAvatar);
 
 export const useGameStore = create<GameStoreState>((set, get) => {
   async function invokeAck<T = undefined>(
@@ -167,6 +231,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     isRestoringSession: Boolean(loadStoredSession()),
     liveStats: null,
     room: null,
+    lobbyPositions: {},
     voiceState: null,
     chatMessages: [],
     errorBanner: null,
@@ -177,6 +242,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
     avatarFlowTarget: null,
     avatarCompletedTarget: null,
     myAvatar: initialAvatar,
+    savedCustomAvatars: initialSavedCustomAvatars,
     pendingRoomSettings: { ...DEFAULT_ROOM_SETTINGS },
     mutedAudio: initialAudio.muted,
     volume: initialAudio.volume,
@@ -227,7 +293,11 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       });
 
       socket.on('room:state', (room) => {
-        set({ room });
+        set({ room, lobbyPositions: room.lobbyPositions ?? {} });
+      });
+
+      socket.on('lobby:positions', (lobbyPositions) => {
+        set({ lobbyPositions });
       });
 
       socket.on('voice:state', (voiceState) => {
@@ -258,6 +328,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
         clearStoredSession();
         set({
           room: null,
+          lobbyPositions: {},
           voiceState: null,
           chatMessages: [],
           kickedReason: reason,
@@ -326,6 +397,44 @@ export const useGameStore = create<GameStoreState>((set, get) => {
         return res.ok;
       }
       return true;
+    },
+
+    addCustomAvatar(dataUrl, label) {
+      const current = get().savedCustomAvatars;
+      const existing = current.find((item) => item.dataUrl === dataUrl);
+      if (existing) {
+        return existing;
+      }
+      const entry: CustomAvatarEntry = {
+        id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        label: label?.trim() || `Photo ${current.length + 1}`,
+        dataUrl,
+      };
+      const next = [entry, ...current].slice(0, 8);
+      saveCustomAvatars(next);
+      set({ savedCustomAvatars: next });
+      return entry;
+    },
+
+    async deleteCustomAvatar(id) {
+      const current = get().savedCustomAvatars;
+      const target = current.find((item) => item.id === id);
+      const next = current.filter((item) => item.id !== id);
+      saveCustomAvatars(next);
+      set({ savedCustomAvatars: next });
+
+      const active = get().myAvatar;
+      if (target && active.presetId === 'custom' && active.customDataUrl === target.dataUrl) {
+        const fallback = createDefaultAvatarConfig();
+        await get().updateAvatar(fallback);
+      }
+    },
+
+    sendLobbyMove(pos) {
+      const { socket, room } = get();
+      if (socket && socket.connected && room?.game.phase === 'LOBBY') {
+        socket.emit('lobby:move', pos);
+      }
     },
 
     setPendingRoomSettings(partial) {
@@ -417,6 +526,7 @@ export const useGameStore = create<GameStoreState>((set, get) => {
       }
       set({
         room: null,
+        lobbyPositions: {},
         voiceState: null,
         chatMessages: [],
         errorBanner: null,

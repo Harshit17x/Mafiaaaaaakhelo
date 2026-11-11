@@ -82,6 +82,7 @@ export function createInitialGameState(now: number = Date.now()): GameState {
     pauseReason: null,
     phaseStartedAt: now,
     phaseEndsAt: null,
+    lobbyCountdownEndsAt: null,
     pausedRemainingMs: null,
     healerSelfSaveCount: 0,
     healerSavedSelfLastNight: false,

@@ -16,9 +16,11 @@ import {
   ArrowRight,
   Check,
   ChevronLeft,
+  Plus,
   RotateCcw,
   Shuffle,
   SlidersHorizontal,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -94,9 +96,12 @@ export function AvatarPanelModal() {
   const avatarOpen = useGameStore((s) => s.avatarOpen);
   const avatarFlowTarget = useGameStore((s) => s.avatarFlowTarget);
   const myAvatar = useGameStore((s) => s.myAvatar);
+  const savedCustomAvatars = useGameStore((s) => s.savedCustomAvatars);
   const setAvatarOpen = useGameStore((s) => s.setAvatarOpen);
   const completeAvatarFlow = useGameStore((s) => s.completeAvatarFlow);
   const updateAvatar = useGameStore((s) => s.updateAvatar);
+  const addCustomAvatar = useGameStore((s) => s.addCustomAvatar);
+  const deleteCustomAvatar = useGameStore((s) => s.deleteCustomAvatar);
 
   const [draft, setDraft] = useState<PlayerAvatarConfig>(myAvatar);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -212,6 +217,8 @@ export function AvatarPanelModal() {
     try {
       setUploadError(null);
       const dataUrl = await resizeImageFileToDataUrl(file);
+      const cleanName = file.name.replace(/\.[^.]+$/, '').slice(0, 14) || undefined;
+      addCustomAvatar(dataUrl, cleanName);
       setDraft((prev) => ({
         ...prev,
         presetId: 'custom',
@@ -223,6 +230,31 @@ export function AvatarPanelModal() {
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Unable to load image.');
     }
+  };
+
+  const handleDeleteCustomEntry = (entryId: string, dataUrl: string) => {
+    setUploadError(null);
+    void deleteCustomAvatar(entryId);
+    if (draft.presetId === 'custom' && draft.customDataUrl === dataUrl) {
+      setDraft({
+        ...createDefaultAvatarConfig(),
+        caption: draft.caption,
+      });
+    }
+  };
+
+  const handleDeleteActiveCustom = () => {
+    if (draft.presetId !== 'custom' || !draft.customDataUrl) return;
+    const match = savedCustomAvatars.find((item) => item.dataUrl === draft.customDataUrl);
+    if (match) {
+      handleDeleteCustomEntry(match.id, match.dataUrl);
+      return;
+    }
+    setUploadError(null);
+    setDraft({
+      ...createDefaultAvatarConfig(),
+      caption: draft.caption,
+    });
   };
 
   const activeLabel = resolveAvatarLabel(draft);
@@ -318,14 +350,14 @@ export function AvatarPanelModal() {
             <div className="relative z-10 px-5 sm:px-8 pt-6 pb-2 flex items-end justify-between gap-3">
               <div>
                 <h2 className="font-condensed font-black italic text-2xl sm:text-3xl tracking-wider text-[#271209] drop-shadow-[0_1px_0_rgba(245,223,176,0.25)]">
-                  AVATARS <span className="text-lg align-middle not-italic">▼</span>
+                  CUSTOMIZATION AREA <span className="text-lg align-middle not-italic">▼</span>
                 </h2>
                 <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-[#ecd8be]/80 mt-0.5">
-                  Pin a dossier portrait &amp; customize its Polaroid card
+                  Add, delete, or pin a dossier avatar &amp; style its card
                 </p>
               </div>
               <span className="text-[11px] font-mono uppercase tracking-wider px-2.5 py-1 rounded bg-[#261108]/60 border border-[#f5dfb0]/20 text-gold-200">
-                {AVATAR_PRESETS.length} Crew + Custom
+                {AVATAR_PRESETS.length} Crew + {savedCustomAvatars.length} Custom
               </span>
             </div>
 
@@ -372,46 +404,84 @@ export function AvatarPanelModal() {
                   );
                 })}
 
-                {/* Custom Photo Polaroid Slot */}
+                {/* Saved Custom Avatars (with Delete action) */}
+                {savedCustomAvatars.map((entry) => {
+                  const isSelected =
+                    draft.presetId === 'custom' && draft.customDataUrl === entry.dataUrl;
+                  return (
+                    <div key={entry.id} className="relative flex flex-col items-center gap-1.5">
+                      <div className="relative">
+                        <AvatarPolaroidCard
+                          avatar={{
+                            ...draft,
+                            presetId: 'custom',
+                            customDataUrl: entry.dataUrl,
+                            pinColor: isSelected ? draft.pinColor : 'gold',
+                            tilt: isSelected ? draft.tilt : 1.6,
+                            filter: isSelected ? draft.filter : 'color',
+                            frameTint: isSelected ? draft.frameTint : 'cream',
+                            caption: isSelected ? draft.caption : entry.label,
+                          }}
+                          selected={isSelected}
+                          showPin
+                          showEquippedBadge
+                          size="board"
+                          title={`Equip ${entry.label}`}
+                          onClick={() => {
+                            setUploadError(null);
+                            setDraft((prev) => ({
+                              ...prev,
+                              presetId: 'custom',
+                              customDataUrl: entry.dataUrl,
+                              zoom: 1,
+                              offsetX: 0,
+                              offsetY: 0,
+                            }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomEntry(entry.id, entry.dataUrl)}
+                          title={`Delete ${entry.label}`}
+                          aria-label={`Delete ${entry.label}`}
+                          className="absolute -top-1.5 -right-1.5 z-30 w-6 h-6 rounded-full bg-crimson-700 hover:bg-crimson-600 text-white border border-crimson-300/70 shadow-md flex items-center justify-center transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <span
+                        className={`text-[11px] font-condensed uppercase tracking-wider px-2 py-0.5 rounded truncate max-w-[8.5rem] transition ${
+                          isSelected
+                            ? 'bg-emerald-900/90 text-emerald-200 font-bold border border-emerald-400/50'
+                            : 'text-[#f3e3cc]/85 font-semibold'
+                        }`}
+                      >
+                        {entry.label}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* Add New Custom Avatar Slot */}
                 <div className="flex flex-col items-center gap-1.5">
                   <AvatarPolaroidCard
                     avatar={{
-                      ...draft,
+                      ...createDefaultAvatarConfig(),
                       presetId: 'custom',
-                      pinColor: draft.presetId === 'custom' ? draft.pinColor : 'gold',
-                      tilt: draft.presetId === 'custom' ? draft.tilt : 2.1,
-                      filter: draft.presetId === 'custom' ? draft.filter : 'color',
-                      frameTint: draft.presetId === 'custom' ? draft.frameTint : 'cream',
-                      caption: draft.presetId === 'custom' ? draft.caption : '',
+                      pinColor: 'gold',
+                      tilt: 2.1,
+                      customDataUrl: null,
                     }}
-                    selected={draft.presetId === 'custom'}
-                    emptyCustomSlot={!draft.customDataUrl}
+                    selected={false}
+                    emptyCustomSlot
                     showPin
-                    showEquippedBadge
                     size="board"
-                    title="Upload your own custom PNG/JPG portrait"
-                    onClick={() => {
-                      if (draft.customDataUrl && draft.presetId !== 'custom') {
-                        setDraft((prev) => ({
-                          ...prev,
-                          presetId: 'custom',
-                          zoom: 1,
-                          offsetX: 0,
-                          offsetY: 0,
-                        }));
-                      } else {
-                        fileInputRef.current?.click();
-                      }
-                    }}
+                    title="Add a new custom PNG/JPG avatar"
+                    onClick={() => fileInputRef.current?.click()}
                   />
-                  <span
-                    className={`text-[11px] font-condensed uppercase tracking-wider px-2 py-0.5 rounded transition ${
-                      draft.presetId === 'custom'
-                        ? 'bg-emerald-900/90 text-emerald-200 font-bold border border-emerald-400/50'
-                        : 'text-[#f3e3cc]/85 font-semibold'
-                    }`}
-                  >
-                    {draft.customDataUrl ? 'Your Photo' : 'Custom Upload'}
+                  <span className="inline-flex items-center gap-1 text-[11px] font-condensed uppercase tracking-wider px-2 py-0.5 rounded bg-[#261108]/75 border border-gold-400/35 text-gold-200 font-semibold">
+                    <Plus className="w-3 h-3" />
+                    Add Avatar
                   </span>
                 </div>
               </div>
@@ -462,8 +532,18 @@ export function AvatarPanelModal() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#271811]/95 hover:bg-[#3a2419] border border-gold-400/40 text-xs font-semibold text-gold-200 transition cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  {draft.customDataUrl ? 'Replace Custom Photo' : 'Upload Own Image'}
+                  Add Avatar Photo
                 </button>
+                {draft.presetId === 'custom' && draft.customDataUrl && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteActiveCustom}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-crimson-950/90 hover:bg-crimson-900 border border-crimson-500/50 text-xs font-semibold text-crimson-200 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Avatar
+                  </button>
+                )}
               </div>
 
               {uploadError && (

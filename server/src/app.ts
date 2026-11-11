@@ -24,6 +24,7 @@ export interface CreateServerOptions {
   timings?: EngineTimings;
   disconnectGraceMs?: number;
   hostAutoTransferGraceMs?: number;
+  lobbyCountdownMs?: number;
   tickIntervalMs?: number;
   repository?: RoomRepository;
 }
@@ -106,6 +107,7 @@ export function createMidnightCityServer(
     timings: options.timings,
     disconnectGraceMs: options.disconnectGraceMs,
     hostAutoTransferGraceMs: options.hostAutoTransferGraceMs,
+    lobbyCountdownMs: options.lobbyCountdownMs,
   });
 
   const rateLimiter = new SocketRateLimiter();
