@@ -1353,9 +1353,14 @@ export function MidnightLoungeTable3D({
             const screenX = (tempVec.x * 0.5 + 0.5) * w;
             const screenY = (-tempVec.y * 0.5 + 0.5) * h;
             const baseFactor = slots.length > 10 ? 6.6 : 7.4;
-            const widthFactor = w < 640 ? Math.max(0.72, w / 540) : w < 900 ? Math.max(0.86, w / 860) : 1;
+            const widthFactor =
+              w < 500
+                ? Math.max(0.56, w / 640)
+                : w < 900
+                  ? Math.max(0.78, w / 900)
+                  : 1;
             const scale = Math.max(
-              0.52,
+              0.42,
               Math.min(1.06, (baseFactor / Math.max(3.4, dist)) * widthFactor)
             );
             cardEl.style.display = 'block';
@@ -1396,7 +1401,7 @@ export function MidnightLoungeTable3D({
   const stageHeightClass = isFullscreen
     ? 'w-screen h-screen h-[100dvh] rounded-none border-0'
     : fillViewport
-      ? 'w-full flex-1 min-h-[26rem] sm:min-h-[30rem] rounded-none border-y border-gold-500/25'
+      ? 'w-full flex-1 min-h-[21rem] sm:min-h-[28rem] rounded-none border-y border-gold-500/25'
       : 'w-full h-[54dvh] min-h-[21rem] sm:h-[60dvh] sm:min-h-[26rem] lg:h-[66dvh] lg:min-h-[31rem] max-h-[48rem] rounded-2xl sm:rounded-3xl border-2 border-gold-500/35 shadow-[0_28px_70px_rgba(0,0,0,0.82)]';
 
   return (
@@ -1569,7 +1574,7 @@ export function MidnightLoungeTable3D({
         </div>
       ) : (
         <div className={`relative overflow-hidden bg-[#06080f] ${stageHeightClass}`}>
-          <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+          <div ref={containerRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" />
 
           {/* Subtle Radial Cinema Vignette over 3D Viewport */}
           <div

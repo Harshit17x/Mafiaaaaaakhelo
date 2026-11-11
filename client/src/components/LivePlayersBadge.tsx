@@ -90,7 +90,8 @@ export function LivePlayersBadge({ variant = 'title' }: LivePlayersBadgeProps) {
         </div>
       ) : (
         <span className="font-condensed uppercase tracking-[0.14em] text-[11px] text-cream-300/75 leading-none">
-          -- Playing
+          --{' '}
+          <span className={variant === 'header' ? 'hidden sm:inline' : ''}>Playing</span>
         </span>
       )}
     </div>
