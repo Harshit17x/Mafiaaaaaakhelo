@@ -49,6 +49,21 @@ export interface MidnightLoungeTable3DProps {
 
 type CameraPreset = 'lounge' | 'overhead' | 'my-seat';
 
+const BASE_CAMERA_FOV = 42;
+const REFERENCE_MIN_ASPECT = 1.35;
+
+/** Widen vertical FOV on narrow/portrait containers so outer lounge chairs stay framed. */
+function computeResponsiveFov(aspect: number): number {
+  if (!Number.isFinite(aspect) || aspect >= REFERENCE_MIN_ASPECT) {
+    return BASE_CAMERA_FOV;
+  }
+  const safeAspect = Math.max(0.55, aspect);
+  const baseHalfTan = Math.tan(THREE.MathUtils.degToRad(BASE_CAMERA_FOV / 2));
+  const targetHorizHalfTan = baseHalfTan * REFERENCE_MIN_ASPECT;
+  const verticalFov = THREE.MathUtils.radToDeg(2 * Math.atan(targetHorizHalfTan / safeAspect));
+  return Math.min(64, Math.max(BASE_CAMERA_FOV, verticalFov));
+}
+
 function createMahoganyTextures(): {
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
@@ -438,7 +453,13 @@ export function MidnightLoungeTable3D({
     scene.background = new THREE.Color('#06080f');
     scene.fog = new THREE.FogExp2('#06080f', 0.036);
 
-    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 70);
+    const initialAspect = width / height;
+    const camera = new THREE.PerspectiveCamera(
+      computeResponsiveFov(initialAspect),
+      initialAspect,
+      0.1,
+      70
+    );
     camera.position.set(0, 5.25, 8.75);
     cameraRef.current = camera;
 
@@ -1202,7 +1223,9 @@ export function MidnightLoungeTable3D({
       if (!container) return;
       const w = container.clientWidth || 1024;
       const h = container.clientHeight || 680;
-      camera.aspect = w / h;
+      const aspect = w / h;
+      camera.aspect = aspect;
+      camera.fov = computeResponsiveFov(aspect);
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
@@ -1304,7 +1327,11 @@ export function MidnightLoungeTable3D({
             const screenX = (tempVec.x * 0.5 + 0.5) * w;
             const screenY = (-tempVec.y * 0.5 + 0.5) * h;
             const baseFactor = slots.length > 10 ? 6.6 : 7.4;
-            const scale = Math.max(0.58, Math.min(1.06, baseFactor / Math.max(3.4, dist)));
+            const widthFactor = w < 640 ? Math.max(0.72, w / 540) : w < 900 ? Math.max(0.86, w / 860) : 1;
+            const scale = Math.max(
+              0.52,
+              Math.min(1.06, (baseFactor / Math.max(3.4, dist)) * widthFactor)
+            );
             cardEl.style.display = 'block';
             cardEl.style.left = `${screenX.toFixed(1)}px`;
             cardEl.style.top = `${screenY.toFixed(1)}px`;
@@ -1342,7 +1369,7 @@ export function MidnightLoungeTable3D({
     ? 'w-screen h-screen rounded-none border-0'
     : fillViewport
       ? 'w-full min-h-[calc(100dvh-3.5rem)] h-[calc(100dvh-3.5rem)] rounded-none border-y border-gold-500/25'
-      : 'w-full h-[72vh] min-h-[34rem] max-h-[54rem] rounded-3xl border-2 border-gold-500/35 shadow-[0_28px_70px_rgba(0,0,0,0.82)]';
+      : 'w-full h-[54dvh] min-h-[21rem] sm:h-[60dvh] sm:min-h-[26rem] lg:h-[66dvh] lg:min-h-[31rem] max-h-[48rem] rounded-2xl sm:rounded-3xl border-2 border-gold-500/35 shadow-[0_28px_70px_rgba(0,0,0,0.82)]';
 
   return (
     <div
@@ -1353,7 +1380,7 @@ export function MidnightLoungeTable3D({
     >
       {!fillViewport && !isFullscreen && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs px-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
             <span className="font-display uppercase tracking-wider text-gold-300 font-semibold">
               {centerTitle}
             </span>
@@ -1632,9 +1659,10 @@ export function MidnightLoungeTable3D({
               <div className="pointer-events-auto w-full max-w-2xl">{overlayBottom}</div>
             )}
 
-            <div className="w-full flex items-center justify-between text-[10.5px] text-cream-300/75">
+            <div className="w-full flex flex-wrap items-center justify-between gap-2 text-[10.5px] text-cream-300/75">
               <span className="px-2.5 py-1 rounded-full bg-noir-950/80 border border-gold-500/25 backdrop-blur-sm">
-                Drag to orbit round table • Scroll to zoom
+                <span className="hidden sm:inline">Drag to orbit round table • Scroll to zoom</span>
+                <span className="sm:hidden">Drag to orbit • Pinch to zoom</span>
               </span>
               {!fillViewport && !isFullscreen && (
                 <button

@@ -3,7 +3,7 @@ import type { ChatChannel } from '@midnight-city/shared';
 import { MessageSquare, Send, Shield, Skull } from 'lucide-react';
 import { useGameStore } from '../stores/useGameStore';
 
-export function ChatPanel() {
+export function ChatPanel({ className = 'h-80 lg:h-[26rem]' }: { className?: string }) {
   const room = useGameStore((s) => s.room);
   const chatMessages = useGameStore((s) => s.chatMessages);
   const sendChat = useGameStore((s) => s.sendChat);
@@ -117,10 +117,10 @@ export function ChatPanel() {
 
   return (
     <section
-      className="noir-card rounded-xl flex flex-col h-80 lg:h-[26rem] overflow-hidden"
+      className={`noir-card rounded-xl flex flex-col overflow-hidden ${className}`}
       aria-label="Text chat panel"
     >
-      <div className="flex items-center border-b border-gold-500/20 bg-noir-900/70 px-2 pt-2 gap-1">
+      <div className="flex items-center border-b border-gold-500/20 bg-noir-900/70 px-2 pt-2 gap-1 shrink-0">
         {availableChannels.map((ch) => {
           const selected = activeChannel === ch;
           return (
@@ -149,17 +149,19 @@ export function ChatPanel() {
 
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto p-3 space-y-2 text-sm"
+        className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2 text-sm"
         aria-live="polite"
       >
         {filteredMessages.length === 0 ? (
-          <p className="text-xs text-cream-400/70 text-center py-8 italic">
-            {activeChannel === 'MAFIA'
-              ? 'Private Syndicate whispers during Mafia night turns appear here.'
-              : activeChannel === 'GHOST'
-                ? 'Spectator spirits gather here.'
-                : 'No messages yet in City chat.'}
-          </p>
+          <div className="h-full flex items-center justify-center px-3 py-6 text-center">
+            <p className="text-xs text-cream-400/70 italic">
+              {activeChannel === 'MAFIA'
+                ? 'Private Syndicate whispers during Mafia night turns appear here.'
+                : activeChannel === 'GHOST'
+                  ? 'Spectator spirits gather here.'
+                  : 'No messages yet in City chat.'}
+            </p>
+          </div>
         ) : (
           filteredMessages.map((msg) => (
             <div key={msg.id} className="leading-snug break-words">
@@ -182,7 +184,7 @@ export function ChatPanel() {
 
       <form
         onSubmit={handleSubmit}
-        className="p-2 border-t border-gold-500/20 bg-noir-950/70 flex gap-2"
+        className="p-2 border-t border-gold-500/20 bg-noir-950/70 flex gap-2 shrink-0"
       >
         <input
           type="text"
@@ -198,13 +200,13 @@ export function ChatPanel() {
                 : 'Read-only right now'
           }
           aria-label="Chat message input"
-          className="flex-1 bg-noir-900 border border-gold-500/25 rounded-lg px-3 py-1.5 text-sm text-cream-100 placeholder:text-cream-600 disabled:opacity-50"
+          className="flex-1 min-w-0 bg-noir-900 border border-gold-500/25 rounded-lg px-3 py-1.5 text-sm text-cream-100 placeholder:text-cream-600 disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={!canWrite || draft.trim().length === 0}
           aria-label="Send chat message"
-          className="px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-noir-950 font-semibold text-sm disabled:opacity-40 inline-flex items-center gap-1 transition-colors"
+          className="shrink-0 px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-noir-950 font-semibold text-sm disabled:opacity-40 inline-flex items-center gap-1 transition-colors"
         >
           <Send className="w-4 h-4" aria-hidden="true" />
         </button>

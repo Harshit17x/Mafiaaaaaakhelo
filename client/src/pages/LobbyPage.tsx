@@ -56,13 +56,13 @@ export function LobbyPage({
       : null;
 
   return (
-    <div className="relative z-10 max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-5">
       <div className="noir-card rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-[0.25em] text-gold-400">
             Speakeasy Cushion Lounge
           </div>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-1">
             <span className="font-mono text-2xl sm:text-3xl font-bold tracking-[0.25em] text-gold-200">
               {room.roomCode}
             </span>
@@ -86,8 +86,8 @@ export function LobbyPage({
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1.5">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col items-start sm:items-end gap-1.5 w-full lg:w-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setAvatarOpen(true)}
@@ -150,59 +150,68 @@ export function LobbyPage({
         </div>
       </div>
 
-      <MidnightLoungeTable3D
-        players={room.players}
-        myPlayerId={room.myPlayerId}
-        mode="LOBBY"
-        viewerIsHost={isHost}
-        speakingPeerIds={speakingPeerIds}
-        accuseCounts={new Map()}
-        myAccuseTargetId={null}
-        selectedVoteTarget={null}
-        canAccuse={false}
-        canVoteCandidate={() => false}
-        onTransferHost={(id) => void transferHost(id)}
-        onKickPlayer={(id) => void kickPlayer(id)}
-        centerTitle={`Lounge Cushions (${playingPlayers.length}/16 Seated)`}
-        centerSubtitle="5–16 players required • Chill and chat while gathering"
-      />
-
-      <div className="space-y-3 max-w-4xl mx-auto">
-        <div className="noir-card rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-cream-300">
-          <span className="font-mono uppercase tracking-[0.16em] text-gold-300">
-            Table Rules
-          </span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="px-2 py-0.5 rounded bg-noir-900 border border-gold-500/25">
-              {settings.narratorMode === 'HUMAN_HOST' ? 'Human Host' : 'Auto-Narrator'}
-            </span>
-            <span className="px-2 py-0.5 rounded bg-crimson-950/70 border border-crimson-500/40 text-crimson-200">
-              {settings.mafiaCount} Mafia
-            </span>
-            {settings.healerEnabled && (
-              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/35 text-emerald-200">
-                Healer
-              </span>
-            )}
-            {settings.detectiveEnabled && (
-              <span className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-500/35 text-sky-200">
-                Detective
-              </span>
-            )}
-            {settings.jokerEnabled && (
-              <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/35 text-purple-200">
-                Joker
-              </span>
-            )}
-            <span className="px-2 py-0.5 rounded bg-noir-900 border border-gold-500/20">
-              Discuss {settings.discussionTimeSec ? `${settings.discussionTimeSec}s` : 'Off'} • Vote{' '}
-              {settings.votingTimeSec ? `${settings.votingTimeSec}s` : 'Off'} • Night{' '}
-              {settings.nightActionTimeSec ? `${settings.nightActionTimeSec}s` : 'Off'}
-            </span>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_19.5rem] xl:grid-cols-[minmax(0,1fr)_21.5rem] gap-4 sm:gap-5 items-stretch">
+        <div className="min-w-0">
+          <MidnightLoungeTable3D
+            players={room.players}
+            myPlayerId={room.myPlayerId}
+            mode="LOBBY"
+            viewerIsHost={isHost}
+            speakingPeerIds={speakingPeerIds}
+            accuseCounts={new Map()}
+            myAccuseTargetId={null}
+            selectedVoteTarget={null}
+            canAccuse={false}
+            canVoteCandidate={() => false}
+            onTransferHost={(id) => void transferHost(id)}
+            onKickPlayer={(id) => void kickPlayer(id)}
+            centerTitle={`Lounge Cushions (${playingPlayers.length}/16 Seated)`}
+            centerSubtitle="5–16 players required • Chill and chat while gathering"
+          />
         </div>
 
-        <ChatPanel />
+        <aside
+          aria-label="Lobby chat sidebar"
+          className="min-w-0 lg:relative lg:min-h-[26rem]"
+        >
+          <div className="lg:absolute lg:inset-0 flex flex-col">
+            <ChatPanel className="h-80 sm:h-96 lg:h-full" />
+          </div>
+        </aside>
+      </div>
+
+      <div className="noir-card rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-cream-300">
+        <span className="font-mono uppercase tracking-[0.16em] text-gold-300">
+          Table Rules
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="px-2 py-0.5 rounded bg-noir-900 border border-gold-500/25">
+            {settings.narratorMode === 'HUMAN_HOST' ? 'Human Host' : 'Auto-Narrator'}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-crimson-950/70 border border-crimson-500/40 text-crimson-200">
+            {settings.mafiaCount} Mafia
+          </span>
+          {settings.healerEnabled && (
+            <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/35 text-emerald-200">
+              Healer
+            </span>
+          )}
+          {settings.detectiveEnabled && (
+            <span className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-500/35 text-sky-200">
+              Detective
+            </span>
+          )}
+          {settings.jokerEnabled && (
+            <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-500/35 text-purple-200">
+              Joker
+            </span>
+          )}
+          <span className="px-2 py-0.5 rounded bg-noir-900 border border-gold-500/20">
+            Discuss {settings.discussionTimeSec ? `${settings.discussionTimeSec}s` : 'Off'} • Vote{' '}
+            {settings.votingTimeSec ? `${settings.votingTimeSec}s` : 'Off'} • Night{' '}
+            {settings.nightActionTimeSec ? `${settings.nightActionTimeSec}s` : 'Off'}
+          </span>
+        </div>
       </div>
     </div>
   );
