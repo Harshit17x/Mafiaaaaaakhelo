@@ -383,10 +383,7 @@ export function DayTablePage({
           >
             <ChatPanel
               className="h-[min(23rem,calc(100dvh-7rem))] sm:h-80 lg:h-[26rem]"
-              onClose={() => {
-                soundEngine.playUiModalClose();
-                setChatOpen(false);
-              }}
+              onClose={() => setChatOpen(false)}
             />
           </motion.aside>
         )}

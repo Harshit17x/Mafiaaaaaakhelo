@@ -171,10 +171,9 @@ export function ChatPanel({
               <button
                 key={ch}
                 type="button"
-                data-sfx="none"
+                data-sfx="tab"
                 onClick={() => {
                   if (activeChannel !== ch) {
-                    soundEngine.playUiTab();
                     setActiveChannel(ch);
                   }
                 }}
@@ -199,7 +198,7 @@ export function ChatPanel({
         {onClose && (
           <button
             type="button"
-            data-sfx="none"
+            data-sfx="modalClose"
             onClick={onClose}
             aria-label="Close chat drawer"
             className="mb-1 shrink-0 p-1.5 rounded-lg bg-noir-950/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"

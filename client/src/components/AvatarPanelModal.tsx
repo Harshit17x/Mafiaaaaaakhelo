@@ -148,6 +148,7 @@ export function AvatarPanelModal() {
     try {
       const ok = await updateAvatar(draft);
       if (!ok) {
+        soundEngine.playUiError();
         return;
       }
       if (avatarFlowTarget) {

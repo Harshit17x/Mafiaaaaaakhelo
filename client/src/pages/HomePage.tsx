@@ -213,6 +213,7 @@ export function HomePage() {
   const activateMenuItem = useCallback(
     (itemId: MenuItem['id']) => {
       soundEngine.unlock();
+      soundEngine.playUiConfirm();
       setLocalError(null);
       if (itemId === 'create') {
         setAvatarOpen(true, 'create');
@@ -223,7 +224,6 @@ export function HomePage() {
       } else if (itemId === 'rules') {
         setRulesOpen(true);
       } else if (itemId === 'credits') {
-        soundEngine.playUiConfirm();
         setActivePanel('credits');
       }
     },
@@ -391,7 +391,7 @@ export function HomePage() {
       </div>
       <button
         type="button"
-        data-sfx="none"
+        data-sfx="click"
         onClick={() => setAvatarOpen(true)}
         className="shrink-0 px-2.5 py-1 rounded-sm border border-gold-400/45 bg-noir-900/80 hover:bg-noir-800 text-[11px] font-condensed uppercase tracking-wider text-gold-200 transition cursor-pointer"
       >
@@ -871,7 +871,7 @@ export function HomePage() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
-                  data-sfx="none"
+                  data-sfx="back"
                   onClick={() => setAvatarOpen(true, 'create')}
                   className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-gold-500/35 bg-noir-900 hover:bg-noir-800 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
                 >

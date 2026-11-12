@@ -292,7 +292,7 @@ export function App() {
 
               <button
                 type="button"
-                data-sfx="none"
+                data-sfx="click"
                 onClick={() => setRulesOpen(true)}
                 aria-label="Open Rules"
                 className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"

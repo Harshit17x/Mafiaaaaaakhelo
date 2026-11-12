@@ -54,7 +54,7 @@ export function RulesModal({
           </h2>
           <button
             type="button"
-            data-sfx="none"
+            data-sfx="back"
             onClick={onClose}
             aria-label="Close rules"
             className="p-2 rounded-lg text-cream-300 hover:text-gold-200 hover:bg-noir-800"
