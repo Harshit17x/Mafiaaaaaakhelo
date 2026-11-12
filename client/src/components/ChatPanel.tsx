@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatChannel } from '@midnight-city/shared';
 import { MessageSquare, Send, Shield, Skull, X } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { useGameStore } from '../stores/useGameStore';
 
 export function ChatPanel({
@@ -17,6 +18,11 @@ export function ChatPanel({
   const [activeChannel, setActiveChannel] = useState<ChatChannel>('PUBLIC');
   const [draft, setDraft] = useState('');
   const listRef = useRef<HTMLDivElement | null>(null);
+  const prevCountRef = useRef(chatMessages.length);
+  const prevLastIdRef = useRef<string | null>(
+    chatMessages[chatMessages.length - 1]?.id ?? null
+  );
+  const lastSentRef = useRef<{ text: string; at: number } | null>(null);
 
   const me = room?.players.find((p) => p.id === room.myPlayerId);
   const phase = room?.game.phase ?? 'LOBBY';
@@ -111,13 +117,44 @@ export function ChatPanel({
     }
   }, [filteredMessages.length, activeChannel]);
 
+  useEffect(() => {
+    const prevCount = prevCountRef.current;
+    const prevLastId = prevLastIdRef.current;
+    const nextCount = chatMessages.length;
+    const latest = nextCount > 0 ? chatMessages[nextCount - 1] : null;
+    prevCountRef.current = nextCount;
+    prevLastIdRef.current = latest?.id ?? null;
+
+    if (!latest) return;
+    const hasNewMessage = nextCount > prevCount || latest.id !== prevLastId;
+    if (!hasNewMessage) return;
+    // Skip initial bulk history hydration
+    if (prevCount === 0 && nextCount > 1) return;
+
+    const myId = room?.myPlayerId;
+    const isFromSelf = Boolean(myId && latest.senderId === myId);
+    const isDevSelfEcho =
+      latest.senderId === 'dev-sim' &&
+      lastSentRef.current !== null &&
+      latest.content === lastSentRef.current.text &&
+      Date.now() - lastSentRef.current.at < 1500;
+    if (!isFromSelf && !isDevSelfEcho) {
+      soundEngine.playChatReceive();
+    }
+  }, [chatMessages, room?.myPlayerId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = draft.trim();
     if (!text || !canWrite) return;
+    lastSentRef.current = { text, at: Date.now() };
     const ok = await sendChat(activeChannel, text);
     if (ok) {
+      soundEngine.playChatSend();
       setDraft('');
+    } else {
+      lastSentRef.current = null;
+      soundEngine.playUiError();
     }
   };
 
@@ -134,7 +171,13 @@ export function ChatPanel({
               <button
                 key={ch}
                 type="button"
-                onClick={() => setActiveChannel(ch)}
+                data-sfx="none"
+                onClick={() => {
+                  if (activeChannel !== ch) {
+                    soundEngine.playUiTab();
+                    setActiveChannel(ch);
+                  }
+                }}
                 className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-t-lg text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-colors ${
                   selected
                     ? ch === 'MAFIA'
@@ -156,6 +199,7 @@ export function ChatPanel({
         {onClose && (
           <button
             type="button"
+            data-sfx="none"
             onClick={onClose}
             aria-label="Close chat drawer"
             className="mb-1 shrink-0 p-1.5 rounded-lg bg-noir-950/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"
@@ -222,6 +266,7 @@ export function ChatPanel({
         />
         <button
           type="submit"
+          data-sfx="none"
           disabled={!canWrite || draft.trim().length === 0}
           aria-label="Send chat message"
           className="shrink-0 px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-400 text-noir-950 font-semibold text-sm disabled:opacity-40 inline-flex items-center gap-1 transition-colors"

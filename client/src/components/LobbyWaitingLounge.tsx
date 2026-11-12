@@ -17,6 +17,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { LobbyCharacterSvg } from './LobbyCharacterSvg';
 
 interface ObstacleBox {
@@ -145,6 +146,23 @@ export function LobbyWaitingLounge({
       ? Math.max(0, Math.ceil((lobbyCountdownEndsAt - (countdownNow + clockOffsetRef.current)) / 1000))
       : null;
 
+  const prevCountdownSecRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (lobbyCountdownEndsAt === null || countdownSec === null) {
+      prevCountdownSecRef.current = null;
+      return;
+    }
+    const prev = prevCountdownSecRef.current;
+    if (prev === countdownSec) return;
+    prevCountdownSecRef.current = countdownSec;
+
+    if (countdownSec >= 1 && countdownSec <= 3) {
+      soundEngine.playTimerTick();
+    } else if (countdownSec === 0 && prev !== null && prev > 0) {
+      soundEngine.playCountdownGo();
+    }
+  }, [lobbyCountdownEndsAt, countdownSec]);
+
   // Player color map keeps suit colors stable while players join/leave
   const playerColorIndex = useMemo(() => {
     const map = new Map<string, number>();
@@ -253,6 +271,7 @@ export function LobbyWaitingLounge({
         );
         if (dist <= CUSTOM_INTERACT_RADIUS) {
           e.preventDefault();
+          soundEngine.playUiModalOpen();
           onOpenCustomizationRef.current();
         }
         return;
@@ -290,6 +309,7 @@ export function LobbyWaitingLounge({
     let rafId = 0;
     let lastTime = performance.now();
     let lastEmitAt = 0;
+    let lastFootstepAt = 0;
     let wasMoving = false;
     let lastNear = false;
 
@@ -358,6 +378,11 @@ export function LobbyWaitingLounge({
       }
 
       myPosRef.current.moving = isMoving;
+
+      if (isMoving && now - lastFootstepAt >= 260) {
+        lastFootstepAt = now;
+        soundEngine.playFootstep();
+      }
 
       // Throttle socket emission (~18 Hz) and send immediate stop frame
       if (isMoving && now - lastEmitAt >= 55) {
@@ -490,6 +515,7 @@ export function LobbyWaitingLounge({
       <div />
       <button
         type="button"
+        data-sfx="none"
         aria-label="Move up"
         onPointerDown={() => setTouchPad(0, -1)}
         onPointerUp={() => setTouchPad(0, 0)}
@@ -503,6 +529,7 @@ export function LobbyWaitingLounge({
       <div />
       <button
         type="button"
+        data-sfx="none"
         aria-label="Move left"
         onPointerDown={() => setTouchPad(-1, 0)}
         onPointerUp={() => setTouchPad(0, 0)}
@@ -516,6 +543,7 @@ export function LobbyWaitingLounge({
       <div className="rounded-lg bg-noir-950/50 border border-gold-500/15" />
       <button
         type="button"
+        data-sfx="none"
         aria-label="Move right"
         onPointerDown={() => setTouchPad(1, 0)}
         onPointerUp={() => setTouchPad(0, 0)}
@@ -529,6 +557,7 @@ export function LobbyWaitingLounge({
       <div />
       <button
         type="button"
+        data-sfx="none"
         aria-label="Move down"
         onPointerDown={() => setTouchPad(0, 1)}
         onPointerUp={() => setTouchPad(0, 0)}
@@ -728,8 +757,10 @@ export function LobbyWaitingLounge({
         {/* Clickable Customization Area Station Overlay */}
         <button
           type="button"
+          data-sfx="none"
           onClick={(e) => {
             e.stopPropagation();
+            soundEngine.playUiModalOpen();
             onOpenCustomization();
           }}
           style={{
@@ -844,6 +875,7 @@ export function LobbyWaitingLounge({
               </div>
               <button
                 type="button"
+                data-sfx="back"
                 onClick={() => setSelectedPlayerId(null)}
                 aria-label="Close player menu"
                 className="p-1 rounded hover:bg-noir-800 text-cream-400 hover:text-cream-100 cursor-pointer"
@@ -856,6 +888,7 @@ export function LobbyWaitingLounge({
               <div className="flex flex-col gap-1.5 pt-1 border-t border-gold-500/20">
                 <button
                   type="button"
+                  data-sfx="confirm"
                   onClick={() => {
                     onTransferHost(selectedPlayer.id);
                     setSelectedPlayerId(null);
@@ -867,6 +900,7 @@ export function LobbyWaitingLounge({
                 </button>
                 <button
                   type="button"
+                  data-sfx="confirm"
                   onClick={() => {
                     onKickPlayer(selectedPlayer.id);
                     setSelectedPlayerId(null);
@@ -894,7 +928,11 @@ export function LobbyWaitingLounge({
           </p>
           <button
             type="button"
-            onClick={onOpenCustomization}
+            data-sfx="none"
+            onClick={() => {
+              soundEngine.playUiModalOpen();
+              onOpenCustomization();
+            }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-display font-bold uppercase tracking-wider transition cursor-pointer ${
               nearCustomize
                 ? 'bg-gold-500 text-noir-950 border-cream-50 shadow-md'

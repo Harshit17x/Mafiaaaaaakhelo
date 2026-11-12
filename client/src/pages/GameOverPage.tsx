@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, Trophy } from 'lucide-react';
+import { LogOut, RotateCcw, Trophy } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { ChatPanel } from '../components/ChatPanel';
 import { ROLE_META, RoleSvgIcon } from '../components/RoleIcons';
 import { useGameStore } from '../stores/useGameStore';
@@ -15,6 +16,7 @@ const CONFETTI_PIECES = Array.from({ length: 24 }, (_, idx) => ({
 export function GameOverPage() {
   const room = useGameStore((s) => s.room);
   const playAgain = useGameStore((s) => s.playAgain);
+  const leaveRoom = useGameStore((s) => s.leaveRoom);
 
   if (!room) return null;
 
@@ -74,18 +76,34 @@ export function GameOverPage() {
           </p>
         )}
 
-        {me?.isHost && (
-          <div className="pt-3">
+        <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3">
+          {me?.isHost && (
             <button
               type="button"
-              onClick={() => void playAgain()}
+              data-sfx="none"
+              onClick={() => {
+                soundEngine.playCardShuffle();
+                void playAgain();
+              }}
               className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition"
             >
               <RotateCcw className="w-4 h-4 shrink-0" />
               Play Again (Return to Lobby)
             </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            data-sfx="none"
+            onClick={() => {
+              soundEngine.playUiBack();
+              void leaveRoom();
+            }}
+            className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-xl bg-noir-900/90 hover:bg-noir-800 border border-gold-500/35 text-cream-100 font-display font-bold uppercase tracking-wider text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            Return to Title
+          </button>
+        </div>
       </motion.section>
 
       <div className="relative z-10 grid lg:grid-cols-12 gap-4 sm:gap-6">

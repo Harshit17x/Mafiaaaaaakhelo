@@ -10,6 +10,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { useGameStore } from '../stores/useGameStore';
 import { MeshVoiceProvider } from '../voice/MeshVoiceProvider';
 import { fetchIceServers } from '../voice/iceConfig';
@@ -43,8 +44,10 @@ export function VoiceControlsBar({
   const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>({});
   const [peerMuted, setPeerMuted] = useState<Record<string, boolean>>({});
   const autoRejoinAttempted = useRef(false);
+  const prevPttPressedRef = useRef(false);
 
   const effectiveLocalMuted = pttMode ? !pttPressed : openMicMuted;
+  const canSpeak = voiceState ? voiceState.canSpeak : true;
 
   useEffect(() => {
     const provider = new MeshVoiceProvider();
@@ -87,7 +90,7 @@ export function VoiceControlsBar({
   }, [joined, room]);
 
   useEffect(() => {
-    if (!pttMode || !joined) return;
+    if (!pttMode || !joined || !canSpeak) return;
     const isTypingTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false;
       const tag = target.tagName;
@@ -111,10 +114,24 @@ export function VoiceControlsBar({
       window.removeEventListener('keyup', onKeyUp);
       setPttPressed(false);
     };
-  }, [pttMode, joined]);
+  }, [pttMode, joined, canSpeak]);
 
-  const handleJoinVoice = async () => {
+  useEffect(() => {
+    if (pttPressed === prevPttPressedRef.current) return;
+    prevPttPressedRef.current = pttPressed;
+    if (!joined || !pttMode || !canSpeak) return;
+    if (pttPressed) {
+      soundEngine.playUiToggle();
+    } else {
+      soundEngine.playUiClick();
+    }
+  }, [pttPressed, joined, pttMode, canSpeak]);
+
+  const handleJoinVoice = async (userInitiated = false) => {
     if (!room || !providerRef.current || joining) return;
+    if (userInitiated) {
+      soundEngine.playUiConfirm();
+    }
     setJoining(true);
     setVoiceError(null);
     try {
@@ -137,12 +154,16 @@ export function VoiceControlsBar({
       }
     } catch {
       setJoined(false);
+      if (userInitiated) {
+        soundEngine.playUiError();
+      }
     } finally {
       setJoining(false);
     }
   };
 
   const handleLeaveVoice = async () => {
+    soundEngine.playUiBack();
     providerRef.current?.disconnect();
     setJoined(false);
     await setVoiceJoined(false);
@@ -157,7 +178,7 @@ export function VoiceControlsBar({
     autoRejoinAttempted.current = true;
     try {
       if (localStorage.getItem(VOICE_AUTOJOIN_KEY) === '1') {
-        void handleJoinVoice();
+        void handleJoinVoice(false);
       }
     } catch {
     }
@@ -174,7 +195,6 @@ export function VoiceControlsBar({
           ? 'Night Silence'
           : 'City Voice';
 
-  const canSpeak = voiceState ? voiceState.canSpeak : true;
   const otherPlayers = room.players.filter((p) => p.id !== room.myPlayerId);
 
   return (
@@ -190,7 +210,8 @@ export function VoiceControlsBar({
             <button
               type="button"
               disabled={joining}
-              onClick={() => void handleJoinVoice()}
+              data-sfx="none"
+              onClick={() => void handleJoinVoice(true)}
               className="px-3 sm:px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50"
             >
               <PhoneCall className="w-3.5 h-3.5" />
@@ -202,7 +223,12 @@ export function VoiceControlsBar({
                 <button
                   type="button"
                   disabled={!canSpeak}
-                  onClick={() => setOpenMicMuted((m) => !m)}
+                  data-sfx="none"
+                  aria-pressed={effectiveLocalMuted}
+                  onClick={() => {
+                    soundEngine.playUiToggle();
+                    setOpenMicMuted((m) => !m);
+                  }}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 border transition ${
                     !canSpeak
                       ? 'bg-noir-900 border-noir-700 text-cream-600'
@@ -226,7 +252,10 @@ export function VoiceControlsBar({
                 <button
                   type="button"
                   disabled={!canSpeak}
-                  onPointerDown={() => setPttPressed(true)}
+                  data-sfx="none"
+                  onPointerDown={() => {
+                    if (canSpeak) setPttPressed(true);
+                  }}
                   onPointerUp={() => setPttPressed(false)}
                   onPointerLeave={() => setPttPressed(false)}
                   onPointerCancel={() => setPttPressed(false)}
@@ -256,7 +285,12 @@ export function VoiceControlsBar({
 
               <button
                 type="button"
-                onClick={() => setPttMode((v) => !v)}
+                data-sfx="none"
+                aria-pressed={pttMode}
+                onClick={() => {
+                  soundEngine.playUiToggle();
+                  setPttMode((v) => !v);
+                }}
                 className="px-2.5 py-1.5 rounded-lg bg-noir-800 hover:bg-noir-700 border border-gold-500/30 text-cream-200"
               >
                 <span className="hidden sm:inline">Mode: </span>
@@ -265,7 +299,16 @@ export function VoiceControlsBar({
 
               <button
                 type="button"
-                onClick={() => setMixerOpen((v) => !v)}
+                data-sfx="none"
+                aria-expanded={mixerOpen}
+                onClick={() => {
+                  if (mixerOpen) {
+                    soundEngine.playUiModalClose();
+                  } else {
+                    soundEngine.playUiModalOpen();
+                  }
+                  setMixerOpen((v) => !v);
+                }}
                 className="px-2.5 py-1.5 rounded-lg bg-noir-800 hover:bg-noir-700 border border-gold-500/30 text-cream-200 inline-flex items-center gap-1"
               >
                 <Sliders className="w-3.5 h-3.5" />
@@ -274,6 +317,7 @@ export function VoiceControlsBar({
 
               <button
                 type="button"
+                data-sfx="none"
                 onClick={() => void handleLeaveVoice()}
                 className="px-2.5 py-1.5 rounded-lg bg-crimson-950/80 hover:bg-crimson-900 border border-crimson-500/40 text-crimson-200 inline-flex items-center gap-1"
               >
@@ -288,6 +332,7 @@ export function VoiceControlsBar({
           {autoplayBlocked && (
             <button
               type="button"
+              data-sfx="confirm"
               onClick={() => void providerRef.current?.resumeBlockedAudio()}
               className="px-3 py-1.5 rounded-lg bg-amber-500 text-noir-950 font-bold inline-flex items-center gap-1.5 animate-pulse"
             >
@@ -328,8 +373,11 @@ export function VoiceControlsBar({
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
+                      data-sfx="none"
+                      aria-pressed={isMuted}
                       onClick={() => {
                         const next = !isMuted;
+                        soundEngine.playUiToggle();
                         setPeerMuted((prev) => ({ ...prev, [p.id]: next }));
                         providerRef.current?.setPeerLocalMuted(p.id, next);
                       }}

@@ -1,15 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Newspaper } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { CountdownBadge } from '../components/CountdownBadge';
 import { ROLE_META, RoleSvgIcon } from '../components/RoleIcons';
 import { useGameStore } from '../stores/useGameStore';
 
 export function DawnPage() {
   const room = useGameStore((s) => s.room);
-  if (!room || !room.game.dawn) return null;
+  const dawn = room?.game.dawn ?? null;
+  const dawnNightNumber = dawn?.nightNumber ?? null;
 
-  const { dawn, phaseEndsAt, paused } = room.game;
+  useEffect(() => {
+    if (dawnNightNumber === null) return;
+    const timer = window.setTimeout(() => {
+      soundEngine.playCardFlip();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [dawnNightNumber]);
+
+  if (!room || !dawn) return null;
+
+  const { phaseEndsAt, paused } = room.game;
   const killed = Boolean(dawn.killedPlayerId);
 
   return (

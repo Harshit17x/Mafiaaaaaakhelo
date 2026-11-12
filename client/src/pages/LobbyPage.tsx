@@ -6,6 +6,7 @@ import {
   Play,
   Unlock,
 } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { ChatPanel } from '../components/ChatPanel';
 import { LobbyWaitingLounge } from '../components/LobbyWaitingLounge';
 import { useGameStore } from '../stores/useGameStore';
@@ -45,9 +46,11 @@ export function LobbyPage({
   const handleCopyInvite = async () => {
     try {
       await navigator.clipboard.writeText(inviteUrl);
+      soundEngine.playChipClink();
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
+      soundEngine.playUiError();
     }
   };
 
@@ -72,6 +75,7 @@ export function LobbyPage({
             </span>
             <button
               type="button"
+              data-sfx="none"
               onClick={handleCopyInvite}
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-gold-500/40 bg-noir-800 hover:bg-noir-700 text-xs font-semibold text-gold-200 transition"
             >
@@ -95,7 +99,12 @@ export function LobbyPage({
             {isHost && (
               <button
                 type="button"
-                onClick={() => void toggleLock(!room.locked)}
+                data-sfx="none"
+                aria-pressed={room.locked}
+                onClick={() => {
+                  soundEngine.playUiToggle();
+                  void toggleLock(!room.locked);
+                }}
                 className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold uppercase tracking-wider transition ${
                   room.locked
                     ? 'border-crimson-500/60 bg-crimson-900/60 text-crimson-200'
@@ -110,7 +119,16 @@ export function LobbyPage({
             {me?.isPlaying && (
               <button
                 type="button"
-                onClick={() => void setReady(!me.isReady)}
+                data-sfx="none"
+                aria-pressed={me.isReady}
+                onClick={() => {
+                  if (!me.isReady) {
+                    soundEngine.playChipClink();
+                  } else {
+                    soundEngine.playUiToggle();
+                  }
+                  void setReady(!me.isReady);
+                }}
                 className={`flex-1 sm:flex-initial px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-display font-bold uppercase tracking-wider text-xs sm:text-sm transition ${
                   me.isReady
                     ? 'bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-400/50'
@@ -125,7 +143,11 @@ export function LobbyPage({
               <button
                 type="button"
                 disabled={!canStart}
-                onClick={() => void startGame()}
+                data-sfx="none"
+                onClick={() => {
+                  soundEngine.playCardShuffle();
+                  void startGame();
+                }}
                 className="flex-1 sm:flex-initial px-5 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-xs sm:text-sm inline-flex items-center justify-center gap-2 disabled:opacity-40 transition"
               >
                 <Play className="w-4 h-4" />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Check, Moon, Search, Shield, Skull } from 'lucide-react';
 import { soundEngine } from '../audio/SoundEngine';
 import { ChatPanel } from '../components/ChatPanel';
@@ -15,6 +15,19 @@ export function NightPage({
   const nightMafiaConfirmTruce = useGameStore((s) => s.nightMafiaConfirmTruce);
   const nightHealerSelect = useGameStore((s) => s.nightHealerSelect);
   const nightDetectiveSelect = useGameStore((s) => s.nightDetectiveSelect);
+
+  const lockedMafiaTargetId =
+    room?.game.night?.subPhase === 'MAFIA_TURN'
+      ? (room.game.night.mafiaLockedTargetId ?? null)
+      : null;
+  const prevLockedMafiaTargetRef = useRef<string | null>(lockedMafiaTargetId);
+
+  useEffect(() => {
+    if (lockedMafiaTargetId && lockedMafiaTargetId !== prevLockedMafiaTargetRef.current) {
+      soundEngine.playGunshot();
+    }
+    prevLockedMafiaTargetRef.current = lockedMafiaTargetId;
+  }, [lockedMafiaTargetId]);
 
   if (!room || !room.game.night) return null;
 
@@ -141,7 +154,11 @@ export function NightPage({
                   <button
                     type="button"
                     disabled={night.hasSubmitted}
-                    onClick={() => void nightMafiaConfirmTruce()}
+                    data-sfx="none"
+                    onClick={() => {
+                      soundEngine.playUiConfirm();
+                      void nightMafiaConfirmTruce();
+                    }}
                     className="px-5 py-2.5 rounded-xl bg-crimson-600 hover:bg-crimson-500 text-white font-semibold text-sm disabled:opacity-50"
                   >
                     {night.hasSubmitted ? 'Ready for Dawn ✓' : 'Confirm Ready'}
@@ -165,7 +182,11 @@ export function NightPage({
                           <button
                             key={target.id}
                             type="button"
-                            onClick={() => void nightMafiaSelect(target.id)}
+                            data-sfx="none"
+                            onClick={() => {
+                              soundEngine.playCardSelect();
+                              void nightMafiaSelect(target.id);
+                            }}
                             className={`text-left rounded-xl p-3 border transition flex items-center justify-between gap-2 ${
                               selected
                                 ? 'bg-crimson-900/70 border-crimson-400 text-white'
@@ -206,6 +227,7 @@ export function NightPage({
                       key={target.id}
                       type="button"
                       disabled={disabledTarget}
+                      data-sfx="none"
                       onClick={() => {
                         soundEngine.playHealChime();
                         void nightHealerSelect(target.id);
@@ -250,7 +272,11 @@ export function NightPage({
                         key={target.id}
                         type="button"
                         disabled={night.hasSubmitted}
-                        onClick={() => void nightDetectiveSelect(target.id)}
+                        data-sfx="none"
+                        onClick={() => {
+                          soundEngine.playInvestigate();
+                          void nightDetectiveSelect(target.id);
+                        }}
                         className={`text-left rounded-xl p-3 border transition flex items-center justify-between ${
                           selected
                             ? 'bg-sky-950/80 border-sky-400 text-sky-100'

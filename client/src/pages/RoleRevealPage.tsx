@@ -70,7 +70,11 @@ export function RoleRevealPage() {
             <button
               type="button"
               disabled={!hasPeeked}
-              onClick={() => void acknowledgeRole()}
+              data-sfx="none"
+              onClick={() => {
+                soundEngine.playChipClink();
+                void acknowledgeRole();
+              }}
               className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-gold-600 to-gold-400 hover:brightness-110 text-noir-950 font-display font-bold uppercase tracking-wider text-sm disabled:opacity-40 transition"
             >
               I Understand

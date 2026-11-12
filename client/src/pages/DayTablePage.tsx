@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SKIP_VOTE_TARGET } from '@midnight-city/shared';
 import { Check, Gavel, MessageSquare, X } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { ChatPanel } from '../components/ChatPanel';
 import { CountdownBadge } from '../components/CountdownBadge';
 import { MidnightLoungeTable3D } from '../components/MidnightLoungeTable3D';
@@ -108,7 +109,12 @@ export function DayTablePage({
         {phase === 'DAY_DISCUSSION' && amAlive && settings.narratorMode === 'AUTO_NARRATOR' && (
           <button
             type="button"
-            onClick={() => void toggleReadyToVote(!me?.readyToVote)}
+            data-sfx="none"
+            aria-pressed={Boolean(me?.readyToVote)}
+            onClick={() => {
+              soundEngine.playUiToggle();
+              void toggleReadyToVote(!me?.readyToVote);
+            }}
             className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[10.5px] sm:text-[11px] font-display font-bold uppercase tracking-wider border transition cursor-pointer ${
               me?.readyToVote
                 ? 'bg-emerald-800/85 border-emerald-400/60 text-emerald-100 shadow-[0_0_16px_rgba(52,211,153,0.3)]'
@@ -127,7 +133,11 @@ export function DayTablePage({
       {phase === 'VOTE_RESULT' && voteResult && verdictMinimized && (
         <button
           type="button"
-          onClick={() => setVerdictMinimized(false)}
+          data-sfx="none"
+          onClick={() => {
+            soundEngine.playUiModalOpen();
+            setVerdictMinimized(false);
+          }}
           className="game-hud-glass px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-display font-semibold uppercase tracking-wider text-gold-200 hover:border-gold-300 inline-flex items-center gap-1.5 cursor-pointer"
         >
           <Gavel className="w-3.5 h-3.5 text-gold-300" />
@@ -137,7 +147,16 @@ export function DayTablePage({
       )}
       <button
         type="button"
-        onClick={() => setChatOpen((v) => !v)}
+        data-sfx="none"
+        aria-expanded={chatOpen}
+        onClick={() => {
+          if (chatOpen) {
+            soundEngine.playUiModalClose();
+          } else {
+            soundEngine.playUiModalOpen();
+          }
+          setChatOpen((v) => !v);
+        }}
         className={`game-hud-glass px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer ${
           chatOpen ? 'border-gold-300 text-gold-200' : 'text-cream-200 hover:text-gold-200'
         }`}
@@ -168,7 +187,11 @@ export function DayTablePage({
               {settings.allowSkipVote && (
                 <button
                   type="button"
-                  onClick={() => setSelectedVoteTarget(SKIP_VOTE_TARGET)}
+                  data-sfx="none"
+                  onClick={() => {
+                    soundEngine.playCardSelect();
+                    setSelectedVoteTarget(SKIP_VOTE_TARGET);
+                  }}
                   className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-display font-bold uppercase tracking-wider border transition cursor-pointer ${
                     selectedVoteTarget === SKIP_VOTE_TARGET
                       ? 'bg-cream-100 text-noir-950 border-cream-50 shadow-md'
@@ -189,7 +212,13 @@ export function DayTablePage({
             <button
               type="button"
               disabled={!selectedVoteTarget}
-              onClick={() => selectedVoteTarget && void castVote(selectedVoteTarget)}
+              data-sfx="none"
+              onClick={() => {
+                if (!selectedVoteTarget) return;
+                soundEngine.playChipClink();
+                soundEngine.playUiConfirm();
+                void castVote(selectedVoteTarget);
+              }}
               className="w-full sm:w-auto px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-crimson-600 to-crimson-500 hover:brightness-110 text-white font-display font-bold uppercase tracking-wider text-xs border border-crimson-300/40 shadow-[0_0_20px_rgba(201,42,55,0.45)] disabled:opacity-40 transition cursor-pointer"
             >
               Confirm Ballot
@@ -268,7 +297,11 @@ export function DayTablePage({
 
                   <button
                     type="button"
-                    onClick={() => setVerdictMinimized(true)}
+                    data-sfx="none"
+                    onClick={() => {
+                      soundEngine.playUiModalClose();
+                      setVerdictMinimized(true);
+                    }}
                     aria-label="Minimize verdict overlay to inspect table"
                     className="shrink-0 p-1.5 rounded-lg bg-noir-900/80 hover:bg-noir-800 border border-gold-500/30 text-cream-300 hover:text-cream-50 cursor-pointer"
                   >
@@ -350,7 +383,10 @@ export function DayTablePage({
           >
             <ChatPanel
               className="h-[min(23rem,calc(100dvh-7rem))] sm:h-80 lg:h-[26rem]"
-              onClose={() => setChatOpen(false)}
+              onClose={() => {
+                soundEngine.playUiModalClose();
+                setChatOpen(false);
+              }}
             />
           </motion.aside>
         )}

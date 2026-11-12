@@ -10,6 +10,7 @@ import {
   Minimize2,
   RotateCcw,
 } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { PlayerTradingCard } from './PlayerTradingCard';
 
 interface SeatVisualHandle {
@@ -382,12 +383,16 @@ export function MidnightLoungeTable3D({
     selectedVoteTarget,
     mode,
     accuseCounts,
+    canVoteCandidate,
+    onSelectVote,
   });
   liveVisualsRef.current = {
     speakingPeerIds,
     selectedVoteTarget,
     mode,
     accuseCounts,
+    canVoteCandidate,
+    onSelectVote,
   };
 
   useEffect(() => {
@@ -471,6 +476,7 @@ export function MidnightLoungeTable3D({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.18;
+    renderer.domElement.dataset.sfx = 'none';
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
@@ -1009,6 +1015,7 @@ export function MidnightLoungeTable3D({
     // =========================================================
     const seatsGroup = new THREE.Group();
     scene.add(seatsGroup);
+    const clickableSeatObjects: THREE.Object3D[] = [];
 
     const chairRadius = tableRadius + (total > 11 ? 0.95 : 0.86);
     const cardAnchorRadius = tableRadius + 0.26;
@@ -1021,6 +1028,10 @@ export function MidnightLoungeTable3D({
       const sz = Math.cos(angle) * chairRadius;
 
       const seatGroup = new THREE.Group();
+      if (slot.player) {
+        seatGroup.userData.playerId = slot.player.id;
+        clickableSeatObjects.push(seatGroup);
+      }
       seatGroup.position.set(sx, 0, sz);
       seatGroup.rotation.y = angle + Math.PI;
 
@@ -1137,6 +1148,10 @@ export function MidnightLoungeTable3D({
       const pz = Math.cos(angle) * placeRadius;
 
       const settingGroup = new THREE.Group();
+      if (slot.player) {
+        settingGroup.userData.playerId = slot.player.id;
+        clickableSeatObjects.push(settingGroup);
+      }
       settingGroup.position.set(px, tableHeight + 0.017, pz);
       settingGroup.rotation.y = angle + Math.PI;
 
@@ -1257,6 +1272,59 @@ export function MidnightLoungeTable3D({
     };
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
+
+    const raycaster = new THREE.Raycaster();
+    const pointerNdc = new THREE.Vector2();
+    let pointerDownAt: { x: number; y: number } | null = null;
+
+    const handleCanvasPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      pointerDownAt = { x: e.clientX, y: e.clientY };
+    };
+
+    const handleCanvasPointerUp = (e: PointerEvent) => {
+      if (e.button !== 0 || !pointerDownAt) return;
+      const dx = e.clientX - pointerDownAt.x;
+      const dy = e.clientY - pointerDownAt.y;
+      pointerDownAt = null;
+      if (Math.hypot(dx, dy) > 6) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointerNdc, camera);
+
+      const hits = raycaster.intersectObjects(clickableSeatObjects, true);
+      if (hits.length === 0) return;
+
+      let obj: THREE.Object3D | null = hits[0]!.object;
+      let hitPlayerId: string | undefined;
+      while (obj) {
+        if (typeof obj.userData.playerId === 'string') {
+          hitPlayerId = obj.userData.playerId;
+          break;
+        }
+        obj = obj.parent;
+      }
+      if (!hitPlayerId) return;
+
+      const {
+        mode: currentMode,
+        canVoteCandidate: canVoteFn,
+        onSelectVote: selectVoteFn,
+      } = liveVisualsRef.current;
+
+      if (currentMode === 'DAY_VOTE' && canVoteFn(hitPlayerId)) {
+        soundEngine.playCardSelect();
+        selectVoteFn?.(hitPlayerId);
+      } else {
+        soundEngine.playCardSelect();
+      }
+    };
+
+    renderer.domElement.addEventListener('pointerdown', handleCanvasPointerDown);
+    renderer.domElement.addEventListener('pointerup', handleCanvasPointerUp);
 
     let rafId = 0;
     const tempVec = new THREE.Vector3();
@@ -1381,6 +1449,8 @@ export function MidnightLoungeTable3D({
 
     return () => {
       window.cancelAnimationFrame(rafId);
+      renderer.domElement.removeEventListener('pointerdown', handleCanvasPointerDown);
+      renderer.domElement.removeEventListener('pointerup', handleCanvasPointerUp);
       resizeObserver.disconnect();
       controls.removeEventListener('start', cancelPresetGlide);
       controls.dispose();
@@ -1430,7 +1500,11 @@ export function MidnightLoungeTable3D({
               <>
                 <button
                   type="button"
-                  onClick={() => setViewMode((v) => (v === '3d' ? 'cards' : '3d'))}
+                  data-sfx="none"
+                  onClick={() => {
+                    soundEngine.playUiTab();
+                    setViewMode((v) => (v === '3d' ? 'cards' : '3d'));
+                  }}
                   className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
                 >
                   {showCardsGrid ? (
@@ -1449,6 +1523,7 @@ export function MidnightLoungeTable3D({
                   <>
                     <button
                       type="button"
+                      data-sfx="tab"
                       onClick={() => applyCameraPreset('lounge')}
                       className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
                         activePreset === 'lounge'
@@ -1461,6 +1536,7 @@ export function MidnightLoungeTable3D({
                     </button>
                     <button
                       type="button"
+                      data-sfx="tab"
                       onClick={() => applyCameraPreset('my-seat')}
                       className={`px-2.5 py-1 rounded-lg border text-xs inline-flex items-center gap-1 transition cursor-pointer ${
                         activePreset === 'my-seat'
@@ -1477,6 +1553,7 @@ export function MidnightLoungeTable3D({
             )}
             <button
               type="button"
+              data-sfx="toggle"
               onClick={() => void toggleFullscreen()}
               className="px-2.5 py-1 rounded-lg bg-noir-900/85 hover:bg-noir-800 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
             >
@@ -1511,7 +1588,11 @@ export function MidnightLoungeTable3D({
                   {!webglError && (
                     <button
                       type="button"
-                      onClick={() => setViewMode('3d')}
+                      data-sfx="none"
+                      onClick={() => {
+                        soundEngine.playUiTab();
+                        setViewMode('3d');
+                      }}
                       title="Switch to 3D Round Table"
                       className="px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 text-gold-200 bg-gold-500/20 border border-gold-400/40 cursor-pointer"
                     >
@@ -1521,6 +1602,7 @@ export function MidnightLoungeTable3D({
                   )}
                   <button
                     type="button"
+                    data-sfx="toggle"
                     onClick={() => void toggleFullscreen()}
                     title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
                     className="px-2 py-1 rounded-lg text-gold-200 hover:bg-gold-500/20 inline-flex items-center gap-1 transition cursor-pointer"
@@ -1651,7 +1733,11 @@ export function MidnightLoungeTable3D({
                 <div className="game-hud-glass rounded-xl p-1 flex items-center gap-0.5 sm:gap-1 text-[11px]">
                   <button
                     type="button"
-                    onClick={() => setViewMode('cards')}
+                    data-sfx="none"
+                    onClick={() => {
+                      soundEngine.playUiTab();
+                      setViewMode('cards');
+                    }}
                     title="Switch to Cards Grid View"
                     className="px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 text-gold-200 hover:bg-gold-500/20 transition cursor-pointer"
                   >
@@ -1663,6 +1749,7 @@ export function MidnightLoungeTable3D({
 
                   <button
                     type="button"
+                    data-sfx="tab"
                     onClick={() => applyCameraPreset('lounge')}
                     title="Default Lounge View"
                     className={`px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 transition cursor-pointer ${
@@ -1676,6 +1763,7 @@ export function MidnightLoungeTable3D({
                   </button>
                   <button
                     type="button"
+                    data-sfx="tab"
                     onClick={() => applyCameraPreset('my-seat')}
                     title="My Seat Perspective"
                     className={`px-2 py-1 rounded-lg font-medium inline-flex items-center gap-1 transition cursor-pointer ${
@@ -1692,6 +1780,7 @@ export function MidnightLoungeTable3D({
 
                   <button
                     type="button"
+                    data-sfx="toggle"
                     onClick={() => void toggleFullscreen()}
                     title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
                     className="px-2 py-1 rounded-lg text-gold-200 hover:bg-gold-500/20 inline-flex items-center gap-1 transition cursor-pointer"
@@ -1724,6 +1813,7 @@ export function MidnightLoungeTable3D({
               {!fillViewport && !isFullscreen && (
                 <button
                   type="button"
+                  data-sfx="toggle"
                   onClick={() => void toggleFullscreen()}
                   className="pointer-events-auto px-2.5 py-1 rounded-full bg-noir-950/85 hover:bg-noir-900 border border-gold-500/35 text-gold-200 inline-flex items-center gap-1 cursor-pointer"
                 >

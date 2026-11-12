@@ -13,6 +13,7 @@ import {
   Vote,
   WifiOff,
 } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { ROLE_META, RoleSvgIcon } from './RoleIcons';
 import { AvatarPolaroidCard } from './AvatarPolaroidCard';
 
@@ -135,6 +136,7 @@ export function PlayerTradingCard({
 
   const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') return;
+    soundEngine.playCardHover();
     onHoverChange?.(true);
     setGlare((prev) => ({ ...prev, active: true }));
   };
@@ -157,9 +159,21 @@ export function PlayerTradingCard({
           ? 'KIA'
           : 'LIVE';
 
+  const canCardClickVote = mode === 'DAY_VOTE' && canVote && !isDead && !isMe;
+
   return (
     <div
       ref={cardRef}
+      data-sfx-hover="card"
+      data-sfx={canCardClickVote ? 'none' : undefined}
+      onClick={
+        canCardClickVote
+          ? () => {
+              soundEngine.playCardSelect();
+              onSelectVote?.();
+            }
+          : undefined
+      }
       onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
@@ -169,6 +183,8 @@ export function PlayerTradingCard({
         )}deg) ${isSelectedVote ? 'translateY(-6px) scale(1.04)' : glare.active ? 'translateY(-4px) scale(1.02)' : ''}`,
       }}
       className={`group relative select-none transition-[transform,filter] duration-150 ease-out will-change-transform ${
+        canCardClickVote ? 'cursor-pointer' : ''
+      } ${
         fluid
           ? 'w-full max-w-[11rem] mx-auto'
           : compact
@@ -413,7 +429,11 @@ export function PlayerTradingCard({
               <>
                 <button
                   type="button"
-                  onClick={onTransferHost}
+                  data-sfx="confirm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTransferHost?.();
+                  }}
                   title="Transfer Host"
                   aria-label={`Transfer host to ${player.name}`}
                   className="flex-1 py-1.5 sm:py-1 rounded bg-gradient-to-b from-noir-800 to-noir-950 hover:from-noir-700 hover:to-noir-900 border border-gold-400/45 text-gold-200 text-[10px] sm:text-[9.5px] font-semibold inline-flex items-center justify-center gap-0.5 shadow-sm transition cursor-pointer"
@@ -423,7 +443,11 @@ export function PlayerTradingCard({
                 </button>
                 <button
                   type="button"
-                  onClick={onKickPlayer}
+                  data-sfx="confirm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onKickPlayer?.();
+                  }}
                   title="Kick Player"
                   aria-label={`Kick ${player.name}`}
                   className="flex-1 py-1.5 sm:py-1 rounded bg-gradient-to-b from-crimson-900/80 to-noir-950 hover:from-crimson-800 hover:to-crimson-950 border border-crimson-400/45 text-crimson-200 text-[10px] sm:text-[9.5px] font-semibold inline-flex items-center justify-center gap-0.5 shadow-sm transition cursor-pointer"
@@ -437,7 +461,13 @@ export function PlayerTradingCard({
             {mode === 'DAY_DISCUSSION' && canAccuse && !isDead && !isMe && (
               <button
                 type="button"
-                onClick={onToggleAccuse}
+                data-sfx="none"
+                data-sfx-hover="card"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundEngine.playCardSelect();
+                  onToggleAccuse?.();
+                }}
                 className={`w-full py-1.5 sm:py-1 rounded-md text-[10px] sm:text-[9.5px] font-display font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1 shadow-md transition cursor-pointer ${
                   iAccused
                     ? 'bg-gradient-to-b from-crimson-500 to-crimson-700 border-crimson-200 text-white shadow-[0_0_12px_rgba(224,79,91,0.5)]'
@@ -452,7 +482,13 @@ export function PlayerTradingCard({
             {mode === 'DAY_VOTE' && canVote && !isDead && !isMe && (
               <button
                 type="button"
-                onClick={onSelectVote}
+                data-sfx="none"
+                data-sfx-hover="card"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundEngine.playCardSelect();
+                  onSelectVote?.();
+                }}
                 className={`w-full py-1.5 sm:py-1 rounded-md text-[10px] sm:text-[9.5px] font-display font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1 shadow-md transition cursor-pointer ${
                   isSelectedVote
                     ? 'bg-gradient-to-b from-crimson-500 to-crimson-700 border-crimson-100 text-white shadow-[0_0_14px_rgba(224,79,91,0.6)]'
