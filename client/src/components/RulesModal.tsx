@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { ROLE_META, RoleSvgIcon } from './RoleIcons';
 import type { Role } from '@midnight-city/shared';
+import { soundEngine } from '../audio/SoundEngine';
+import { ROLE_META, RoleSvgIcon } from './RoleIcons';
 
 const ROLES: Role[] = ['MAFIA', 'HEALER', 'DETECTIVE', 'JOKER', 'VILLAGER'];
 
@@ -12,6 +13,17 @@ export function RulesModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      soundEngine.playUiModalOpen();
+    } else if (!open && wasOpenRef.current) {
+      soundEngine.playUiModalClose();
+    }
+    wasOpenRef.current = open;
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -42,6 +54,7 @@ export function RulesModal({
           </h2>
           <button
             type="button"
+            data-sfx="none"
             onClick={onClose}
             aria-label="Close rules"
             className="p-2 rounded-lg text-cream-300 hover:text-gold-200 hover:bg-noir-800"

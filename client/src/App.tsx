@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, LogOut, Radio, WifiOff } from 'lucide-react';
 import { soundEngine } from './audio/SoundEngine';
+import { mountUiSoundDelegator } from './audio/uiSoundDelegator';
 import { Atmosphere } from './components/Atmosphere';
 import { AudioControls } from './components/AudioControls';
 import { AvatarPanelModal } from './components/AvatarPanelModal';
@@ -47,7 +48,12 @@ export function App() {
     return merged;
   }, [speakingPeerIds, devSpeakingPeerIds]);
   const prevPhaseRef = useRef<string | null>(null);
+  const prevRoomCodeRef = useRef<string | null>(null);
+  const prevPlayerCountRef = useRef<{ roomCode: string; count: number } | null>(null);
+  const prevAlertRef = useRef<string | null>(null);
   const prevNarrationSeqRef = useRef<number>(0);
+  const dawnCueTimerRef = useRef<number | null>(null);
+  const lastTickRef = useRef<{ endsAt: number; sec: number } | null>(null);
 
   const handleSpeakingChange = useCallback((ids: Set<string>) => {
     setSpeakingPeerIds(ids);
@@ -58,12 +64,33 @@ export function App() {
   }, [initConnection]);
 
   useEffect(() => {
-    const unlock = () => soundEngine.unlock();
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
+    soundEngine.preloadAll();
+    const unmountDelegator = mountUiSoundDelegator();
+
+    const unlock = () => {
+      soundEngine.unlock();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        soundEngine.unlock();
+      }
+    };
+
+    window.addEventListener('pointerdown', unlock, { passive: true });
+    window.addEventListener('keydown', unlock, { passive: true });
+    window.addEventListener('touchstart', unlock, { passive: true });
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
+      unmountDelegator();
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (dawnCueTimerRef.current !== null) {
+        window.clearTimeout(dawnCueTimerRef.current);
+        dawnCueTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -74,41 +101,145 @@ export function App() {
   const phase = room ? room.game.phase : 'HOME';
   const isDayTablePhase =
     phase === 'DAY_DISCUSSION' || phase === 'DAY_VOTE' || phase === 'VOTE_RESULT';
+  const roomCode = room?.roomCode ?? null;
+  const gamePhase = room?.game.phase ?? null;
+  const dawnKilled = Boolean(room?.game.dawn?.killedPlayerId);
+  const primaryWinner = room?.game.winners[0] ?? 'CITY';
+  const playerCount = room?.players.length ?? 0;
+  const activeAlertMessage = kickedReason ?? errorBanner ?? null;
+
+  const activeTimerEndsAt =
+    room &&
+    !room.game.paused &&
+    room.game.phase !== 'LOBBY' &&
+    room.game.phase !== 'GAME_OVER'
+      ? (room.game.phaseEndsAt ??
+          (room.game.phase === 'NIGHT' &&
+          room.game.night?.canAct &&
+          !room.game.night.hasSubmitted
+            ? room.game.night.subPhaseEndsAt
+            : null))
+      : null;
 
   useEffect(() => {
-    if (!room) {
-      soundEngine.setAmbient('none');
+    if (!roomCode || !gamePhase) {
+      soundEngine.setAmbient('home');
       prevPhaseRef.current = null;
+      prevRoomCodeRef.current = null;
+      if (dawnCueTimerRef.current !== null) {
+        window.clearTimeout(dawnCueTimerRef.current);
+        dawnCueTimerRef.current = null;
+      }
       return;
     }
 
-    if (room.game.phase === 'NIGHT') {
+    if (prevRoomCodeRef.current !== roomCode) {
+      prevRoomCodeRef.current = roomCode;
+      prevPhaseRef.current = null;
+    }
+
+    if (gamePhase === 'LOBBY') {
+      soundEngine.setAmbient('lobby');
+    } else if (gamePhase === 'NIGHT') {
       soundEngine.setAmbient('night');
     } else if (
-      room.game.phase === 'DAWN' ||
-      room.game.phase === 'DAY_DISCUSSION' ||
-      room.game.phase === 'DAY_VOTE' ||
-      room.game.phase === 'VOTE_RESULT'
+      gamePhase === 'DAWN' ||
+      gamePhase === 'DAY_DISCUSSION' ||
+      gamePhase === 'DAY_VOTE' ||
+      gamePhase === 'VOTE_RESULT'
     ) {
       soundEngine.setAmbient('day');
     } else {
       soundEngine.setAmbient('none');
     }
 
-    if (prevPhaseRef.current !== room.game.phase) {
-      prevPhaseRef.current = room.game.phase;
-      if (room.game.phase === 'NIGHT') {
-        soundEngine.playDoorCreak();
-      } else if (room.game.phase === 'DAWN') {
-        soundEngine.playRooster();
-        if (room.game.dawn?.killedPlayerId) {
-          window.setTimeout(() => soundEngine.playGunshot(), 420);
+    if (prevPhaseRef.current !== gamePhase) {
+      const prevPhase = prevPhaseRef.current;
+      prevPhaseRef.current = gamePhase;
+
+      if (dawnCueTimerRef.current !== null) {
+        window.clearTimeout(dawnCueTimerRef.current);
+        dawnCueTimerRef.current = null;
+      }
+
+      if (gamePhase === 'ROLE_REVEAL') {
+        if (prevPhase !== null) {
+          soundEngine.playCardShuffle();
         }
-      } else if (room.game.phase === 'VOTE_RESULT') {
+      } else if (gamePhase === 'NIGHT') {
+        soundEngine.playDoorCreak();
+      } else if (gamePhase === 'DAWN') {
+        soundEngine.playRooster();
+        dawnCueTimerRef.current = window.setTimeout(() => {
+          dawnCueTimerRef.current = null;
+          if (dawnKilled) {
+            soundEngine.playGunshot();
+          } else {
+            soundEngine.playHealChime();
+          }
+        }, 420);
+      } else if (gamePhase === 'DAY_DISCUSSION') {
+        soundEngine.playChipClink();
+      } else if (gamePhase === 'DAY_VOTE') {
         soundEngine.playGavel();
+      } else if (gamePhase === 'VOTE_RESULT') {
+        soundEngine.playGavel();
+      } else if (gamePhase === 'GAME_OVER') {
+        if (primaryWinner === 'MAFIA') {
+          soundEngine.playVictoryMafia();
+        } else {
+          soundEngine.playVictoryCitizen();
+        }
       }
     }
-  }, [room]);
+  }, [roomCode, gamePhase, dawnKilled, primaryWinner]);
+
+  useEffect(() => {
+    if (!roomCode) {
+      prevPlayerCountRef.current = null;
+      return;
+    }
+    const prev = prevPlayerCountRef.current;
+    if (!prev || prev.roomCode !== roomCode) {
+      prevPlayerCountRef.current = { roomCode, count: playerCount };
+      return;
+    }
+    if (playerCount > prev.count) {
+      soundEngine.playPlayerJoin();
+    } else if (playerCount < prev.count) {
+      soundEngine.playPlayerLeave();
+    }
+    prevPlayerCountRef.current = { roomCode, count: playerCount };
+  }, [roomCode, playerCount]);
+
+  useEffect(() => {
+    if (activeAlertMessage && activeAlertMessage !== prevAlertRef.current) {
+      soundEngine.playUiError();
+    }
+    prevAlertRef.current = activeAlertMessage;
+  }, [activeAlertMessage]);
+
+  useEffect(() => {
+    if (!activeTimerEndsAt) {
+      lastTickRef.current = null;
+      return;
+    }
+
+    const checkTick = () => {
+      const remainingSec = Math.ceil((activeTimerEndsAt - Date.now()) / 1000);
+      if (remainingSec >= 1 && remainingSec <= 5) {
+        const prev = lastTickRef.current;
+        if (!prev || prev.endsAt !== activeTimerEndsAt || prev.sec !== remainingSec) {
+          lastTickRef.current = { endsAt: activeTimerEndsAt, sec: remainingSec };
+          soundEngine.playTimerTick();
+        }
+      }
+    };
+
+    checkTick();
+    const id = window.setInterval(checkTick, 200);
+    return () => window.clearInterval(id);
+  }, [activeTimerEndsAt]);
 
   useEffect(() => {
     if (!lastNarration || lastNarration.seq === prevNarrationSeqRef.current) {
@@ -161,6 +292,7 @@ export function App() {
 
               <button
                 type="button"
+                data-sfx="none"
                 onClick={() => setRulesOpen(true)}
                 aria-label="Open Rules"
                 className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
@@ -171,6 +303,7 @@ export function App() {
 
               <button
                 type="button"
+                data-sfx="back"
                 onClick={() => void leaveRoom()}
                 aria-label="Leave Room"
                 className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-crimson-300 hover:text-crimson-200 hover:bg-crimson-900/40"
@@ -196,6 +329,7 @@ export function App() {
             <span className="min-w-0 break-words">{kickedReason ?? errorBanner}</span>
             <button
               type="button"
+              data-sfx="back"
               onClick={clearError}
               className="shrink-0 text-xs uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-noir-950/50 hover:bg-noir-950"
             >

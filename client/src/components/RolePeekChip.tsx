@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Eye } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import { ROLE_META, RoleSvgIcon } from './RoleIcons';
 import { useGameStore } from '../stores/useGameStore';
 
 export function RolePeekChip() {
   const room = useGameStore((s) => s.room);
   const [peeking, setPeeking] = useState(false);
+  const peekingRef = useRef(false);
+  const peekStartedAtRef = useRef(0);
 
   if (!room) return null;
   const phase = room.game.phase;
@@ -17,6 +20,24 @@ export function RolePeekChip() {
     return null;
   }
 
+  const startPeek = () => {
+    if (peekingRef.current) return;
+    peekingRef.current = true;
+    peekStartedAtRef.current = Date.now();
+    setPeeking(true);
+    soundEngine.unlock();
+    soundEngine.playCardFlip();
+  };
+
+  const stopPeek = () => {
+    if (!peekingRef.current) return;
+    peekingRef.current = false;
+    setPeeking(false);
+    if (Date.now() - peekStartedAtRef.current >= 140) {
+      soundEngine.playCardFlip();
+    }
+  };
+
   const role = room.game.myRole;
   const meta = ROLE_META[role];
   const fellowMafiaNames = room.players
@@ -27,19 +48,21 @@ export function RolePeekChip() {
     <div className="relative">
       <button
         type="button"
-        onPointerDown={() => setPeeking(true)}
-        onPointerUp={() => setPeeking(false)}
-        onPointerLeave={() => setPeeking(false)}
-        onPointerCancel={() => setPeeking(false)}
+        data-sfx="none"
+        onPointerDown={startPeek}
+        onPointerUp={stopPeek}
+        onPointerLeave={stopPeek}
+        onPointerCancel={stopPeek}
+        onBlur={stopPeek}
         onContextMenu={(e) => e.preventDefault()}
         style={{ WebkitTouchCallout: 'none' }}
         onKeyDown={(e) => {
           if (e.key === ' ' || e.key === 'Enter') {
             e.preventDefault();
-            setPeeking(true);
+            startPeek();
           }
         }}
-        onKeyUp={() => setPeeking(false)}
+        onKeyUp={stopPeek}
         aria-label="Hold to peek at your secret role"
         className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-gold-500/40 bg-noir-900/90 hover:bg-noir-800 text-xs font-semibold text-gold-200 select-none touch-none"
       >

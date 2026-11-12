@@ -48,6 +48,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
           {settings.mafiaCount !== validation.suggestedMafiaCount ? (
             <button
               type="button"
+              data-sfx="chip"
               onClick={() => onChange({ mafiaCount: validation.suggestedMafiaCount })}
               className="text-xs px-3 py-1 rounded-full border border-gold-400/50 bg-gold-500/15 hover:bg-gold-500/25 text-gold-200 transition cursor-pointer"
             >
@@ -62,6 +63,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
           {onReset && (
             <button
               type="button"
+              data-sfx="back"
               onClick={onReset}
               title="Reset to default rules"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gold-500/25 bg-noir-900 hover:bg-noir-800 text-[11px] font-mono text-cream-300 hover:text-gold-200 transition cursor-pointer"
@@ -106,6 +108,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
+              data-sfx="tab"
               onClick={() => onChange({ narratorMode: 'AUTO_NARRATOR' })}
               className={`px-3 py-2 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                 settings.narratorMode === 'AUTO_NARRATOR'
@@ -117,6 +120,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             </button>
             <button
               type="button"
+              data-sfx="tab"
               onClick={() => onChange({ narratorMode: 'HUMAN_HOST' })}
               className={`px-3 py-2 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                 settings.narratorMode === 'HUMAN_HOST'
@@ -141,6 +145,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
           <div className="flex items-center justify-between">
             <button
               type="button"
+              data-sfx="chip"
               disabled={settings.mafiaCount <= 1}
               onClick={() => onChange({ mafiaCount: Math.max(1, settings.mafiaCount - 1) })}
               className="w-9 h-9 rounded-lg border border-gold-500/35 bg-noir-800 hover:bg-noir-700 text-lg font-bold disabled:opacity-40 cursor-pointer"
@@ -153,6 +158,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             </span>
             <button
               type="button"
+              data-sfx="chip"
               disabled={settings.mafiaCount >= 8}
               onClick={() => onChange({ mafiaCount: Math.min(8, settings.mafiaCount + 1) })}
               className="w-9 h-9 rounded-lg border border-gold-500/35 bg-noir-800 hover:bg-noir-700 text-lg font-bold disabled:opacity-40 cursor-pointer"
@@ -181,6 +187,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
               <span className="text-cream-100/90">{toggle.label}</span>
               <input
                 type="checkbox"
+                data-sfx="toggle"
                 disabled={isDisabled}
                 checked={checked}
                 onChange={(e) =>
@@ -199,6 +206,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             Healer Self-Save Rule
           </span>
           <select
+            data-sfx="click"
             disabled={!settings.healerEnabled}
             value={settings.healerSelfSaveRule}
             onChange={(e) =>
@@ -218,6 +226,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             Vote Tie Rule
           </span>
           <select
+            data-sfx="click"
             value={settings.tieRule}
             onChange={(e) => onChange({ tieRule: e.target.value as TieRule })}
             className="w-full rounded-xl bg-noir-950 border border-gold-500/30 px-3 py-2 text-base sm:text-sm text-cream-100"
@@ -232,6 +241,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
         <label className="space-y-1">
           <span className="text-cream-300 font-semibold">Discussion</span>
           <select
+            data-sfx="click"
             value={settings.discussionTimeSec ?? 'off'}
             onChange={(e) =>
               onChange({
@@ -252,6 +262,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
         <label className="space-y-1">
           <span className="text-cream-300 font-semibold">Voting</span>
           <select
+            data-sfx="click"
             value={settings.votingTimeSec ?? 'off'}
             onChange={(e) =>
               onChange({
@@ -271,6 +282,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
         <label className="space-y-1">
           <span className="text-cream-300 font-semibold">Night Action</span>
           <select
+            data-sfx="click"
             value={settings.nightActionTimeSec ?? 'off'}
             onChange={(e) =>
               onChange({
@@ -297,6 +309,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             <span>Preview @</span>
             <button
               type="button"
+              data-sfx="chip"
               onClick={() => setPreviewPlayers((p) => Math.max(5, p - 1))}
               className="w-7 h-7 sm:w-5 sm:h-5 rounded border border-gold-500/30 bg-noir-950 hover:bg-noir-800 text-gold-200 cursor-pointer"
               aria-label="Decrease preview player count"
@@ -306,6 +319,7 @@ export function HouseRulesEditor({ settings, onChange, onReset }: HouseRulesEdit
             <span className="text-gold-200 font-bold w-5 text-center">{previewPlayers}</span>
             <button
               type="button"
+              data-sfx="chip"
               onClick={() => setPreviewPlayers((p) => Math.min(16, p + 1))}
               className="w-7 h-7 sm:w-5 sm:h-5 rounded border border-gold-500/30 bg-noir-950 hover:bg-noir-800 text-gold-200 cursor-pointer"
               aria-label="Increase preview player count"

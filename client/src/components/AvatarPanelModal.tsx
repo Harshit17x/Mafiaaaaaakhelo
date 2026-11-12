@@ -24,6 +24,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { soundEngine } from '../audio/SoundEngine';
 import {
   AvatarPolaroidCard,
   AvatarPushpinSvg,
@@ -108,6 +109,14 @@ export function AvatarPanelModal() {
   const [saving, setSaving] = useState(false);
   const [mobileTab, setMobileTab] = useState<'board' | 'studio'>('board');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (avatarOpen && !wasOpenRef.current) {
+      soundEngine.playUiModalOpen();
+    }
+    wasOpenRef.current = avatarOpen;
+  }, [avatarOpen]);
 
   useEffect(() => {
     if (avatarOpen) {
@@ -121,6 +130,7 @@ export function AvatarPanelModal() {
     if (!avatarOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        soundEngine.playUiModalClose();
         setAvatarOpen(false);
       }
     };
@@ -136,10 +146,14 @@ export function AvatarPanelModal() {
     if (saving) return;
     setSaving(true);
     try {
-      await updateAvatar(draft);
+      const ok = await updateAvatar(draft);
+      if (!ok) {
+        return;
+      }
       if (avatarFlowTarget) {
         completeAvatarFlow();
       } else {
+        soundEngine.playChipClink();
         setAvatarOpen(false);
       }
     } finally {
@@ -150,6 +164,7 @@ export function AvatarPanelModal() {
   const handleSelectPreset = (presetId: (typeof AVATAR_PRESETS)[number]['id']) => {
     const meta = AVATAR_PRESETS.find((p) => p.id === presetId);
     if (!meta) return;
+    soundEngine.playCardFlip();
     setUploadError(null);
     setDraft((prev) => ({
       ...prev,
@@ -164,6 +179,7 @@ export function AvatarPanelModal() {
   };
 
   const handleRandomize = () => {
+    soundEngine.playCardShuffle();
     const preset = AVATAR_PRESETS[Math.floor(Math.random() * AVATAR_PRESETS.length)] ?? AVATAR_PRESETS[0]!;
     const filter = FILTER_OPTIONS[Math.floor(Math.random() * FILTER_OPTIONS.length)]?.id ?? 'color';
     const frameTint = FRAME_OPTIONS[Math.floor(Math.random() * FRAME_OPTIONS.length)]?.id ?? 'cream';
@@ -184,6 +200,7 @@ export function AvatarPanelModal() {
   };
 
   const handleReset = () => {
+    soundEngine.playUiBack();
     setUploadError(null);
     if (draft.presetId === 'custom') {
       setDraft((prev) => ({
@@ -213,6 +230,7 @@ export function AvatarPanelModal() {
     e.target.value = '';
     if (!file) return;
     if (!file.type.startsWith('image/')) {
+      soundEngine.playUiError();
       setUploadError('Please pick a PNG, JPG, or WebP image file.');
       return;
     }
@@ -221,6 +239,7 @@ export function AvatarPanelModal() {
       const dataUrl = await resizeImageFileToDataUrl(file);
       const cleanName = file.name.replace(/\.[^.]+$/, '').slice(0, 14) || undefined;
       addCustomAvatar(dataUrl, cleanName);
+      soundEngine.playCardFlip();
       setDraft((prev) => ({
         ...prev,
         presetId: 'custom',
@@ -231,6 +250,7 @@ export function AvatarPanelModal() {
       }));
       setMobileTab('studio');
     } catch (err) {
+      soundEngine.playUiError();
       setUploadError(err instanceof Error ? err.message : 'Unable to load image.');
     }
   };
@@ -275,6 +295,7 @@ export function AvatarPanelModal() {
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
+              data-sfx="modalClose"
               onClick={() => setAvatarOpen(false)}
               className="inline-flex items-center gap-1 bg-[#f4f1ea] hover:bg-white active:scale-[0.98] text-[#171310] font-condensed font-black uppercase tracking-wide text-xs sm:text-base px-3 sm:px-5 py-2.5 sm:py-3 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition cursor-pointer"
             >
@@ -304,6 +325,7 @@ export function AvatarPanelModal() {
           <div className="flex items-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 pl-1">
             <button
               type="button"
+              data-sfx="none"
               onClick={handleRandomize}
               aria-label="Randomize avatar"
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded bg-[#271b15] hover:bg-[#36241b] border border-gold-500/35 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
@@ -314,6 +336,7 @@ export function AvatarPanelModal() {
 
             <button
               type="button"
+              data-sfx="none"
               onClick={() => void handleSaveAndClose()}
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded bg-gradient-to-r from-[#148653] to-[#1aa366] hover:brightness-110 border border-emerald-300/50 text-xs sm:text-sm font-condensed font-black uppercase tracking-wider text-white shadow-lg disabled:opacity-60 transition cursor-pointer"
@@ -348,6 +371,7 @@ export function AvatarPanelModal() {
           <div className="grid grid-cols-2 gap-1.5 flex-1">
             <button
               type="button"
+              data-sfx="tab"
               onClick={() => setMobileTab('board')}
               className={`py-1.5 px-2.5 rounded-lg text-xs font-condensed font-bold uppercase tracking-wider border transition cursor-pointer ${
                 mobileTab === 'board'
@@ -359,6 +383,7 @@ export function AvatarPanelModal() {
             </button>
             <button
               type="button"
+              data-sfx="tab"
               onClick={() => setMobileTab('studio')}
               className={`py-1.5 px-2.5 rounded-lg text-xs font-condensed font-bold uppercase tracking-wider border inline-flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 mobileTab === 'studio'
@@ -427,7 +452,12 @@ export function AvatarPanelModal() {
                       };
 
                   return (
-                    <div key={preset.id} className="flex flex-col items-center gap-1.5">
+                    <div
+                      key={preset.id}
+                      data-sfx="none"
+                      data-sfx-hover="card"
+                      className="flex flex-col items-center gap-1.5"
+                    >
                       <AvatarPolaroidCard
                         avatar={cardAvatar}
                         selected={isSelected}
@@ -456,7 +486,7 @@ export function AvatarPanelModal() {
                     draft.presetId === 'custom' && draft.customDataUrl === entry.dataUrl;
                   return (
                     <div key={entry.id} className="relative flex flex-col items-center gap-1.5">
-                      <div className="relative">
+                      <div className="relative" data-sfx="none" data-sfx-hover="card">
                         <AvatarPolaroidCard
                           avatar={{
                             ...draft,
@@ -474,6 +504,7 @@ export function AvatarPanelModal() {
                           size="board"
                           title={`Equip ${entry.label}`}
                           onClick={() => {
+                            soundEngine.playCardFlip();
                             setUploadError(null);
                             setDraft((prev) => ({
                               ...prev,
@@ -487,6 +518,7 @@ export function AvatarPanelModal() {
                         />
                         <button
                           type="button"
+                          data-sfx="back"
                           onClick={() => handleDeleteCustomEntry(entry.id, entry.dataUrl)}
                           title={`Delete ${entry.label}`}
                           aria-label={`Delete ${entry.label}`}
@@ -509,7 +541,11 @@ export function AvatarPanelModal() {
                 })}
 
                 {/* Add New Custom Avatar Slot */}
-                <div className="flex flex-col items-center gap-1.5">
+                <div
+                  data-sfx="click"
+                  data-sfx-hover="card"
+                  className="flex flex-col items-center gap-1.5"
+                >
                   <AvatarPolaroidCard
                     avatar={{
                       ...createDefaultAvatarConfig(),
@@ -549,6 +585,7 @@ export function AvatarPanelModal() {
               </div>
               <button
                 type="button"
+                data-sfx="none"
                 onClick={handleReset}
                 className="inline-flex items-center gap-1 text-[11px] font-mono text-cream-300 hover:text-gold-200 px-2 py-1 rounded border border-gold-500/20 hover:border-gold-400/45 transition cursor-pointer"
               >
@@ -578,6 +615,7 @@ export function AvatarPanelModal() {
                 />
                 <button
                   type="button"
+                  data-sfx="click"
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#271811]/95 hover:bg-[#3a2419] border border-gold-400/40 text-xs font-semibold text-gold-200 transition cursor-pointer"
                 >
@@ -587,6 +625,7 @@ export function AvatarPanelModal() {
                 {draft.presetId === 'custom' && draft.customDataUrl && (
                   <button
                     type="button"
+                    data-sfx="back"
                     onClick={handleDeleteActiveCustom}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-crimson-950/90 hover:bg-crimson-900 border border-crimson-500/50 text-xs font-semibold text-crimson-200 transition cursor-pointer"
                   >
@@ -613,6 +652,7 @@ export function AvatarPanelModal() {
                   <button
                     key={opt.id}
                     type="button"
+                    data-sfx="chip"
                     onClick={() => setDraft((prev) => ({ ...prev, filter: opt.id }))}
                     className={`py-1.5 px-1.5 rounded text-[11px] font-semibold border transition cursor-pointer ${
                       draft.filter === opt.id
@@ -637,6 +677,7 @@ export function AvatarPanelModal() {
                     <button
                       key={opt.id}
                       type="button"
+                      data-sfx="chip"
                       title={opt.label}
                       aria-label={`${opt.label} Polaroid frame`}
                       onClick={() => setDraft((prev) => ({ ...prev, frameTint: opt.id }))}
@@ -663,6 +704,7 @@ export function AvatarPanelModal() {
                     <button
                       key={opt.id}
                       type="button"
+                      data-sfx="chip"
                       title={`${opt.label} Pushpin`}
                       aria-label={`${opt.label} pushpin`}
                       onClick={() => setDraft((prev) => ({ ...prev, pinColor: opt.id }))}
@@ -704,6 +746,7 @@ export function AvatarPanelModal() {
                 {draft.caption && (
                   <button
                     type="button"
+                    data-sfx="back"
                     onClick={() => setDraft((prev) => ({ ...prev, caption: '' }))}
                     aria-label="Clear note"
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-cream-400 hover:text-cream-100"

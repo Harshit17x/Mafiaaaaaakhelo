@@ -113,6 +113,17 @@ export function HomePage() {
 
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
   const aliasInputRef = useRef<HTMLInputElement | null>(null);
+  const prevConnectionStatusRef = useRef(connectionStatus);
+
+  useEffect(() => {
+    if (
+      connectionStatus === 'disconnected' &&
+      prevConnectionStatusRef.current !== 'disconnected'
+    ) {
+      soundEngine.playUiError();
+    }
+    prevConnectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
 
   useEffect(() => {
     const code = extractInviteRoomCode();
@@ -159,7 +170,7 @@ export function HomePage() {
   const skipIntro = useCallback(() => {
     if (bootPhase === 'loading') {
       soundEngine.unlock();
-      soundEngine.playMenuConfirm();
+      soundEngine.playUiConfirm();
       setLoadProgress(100);
       setBootPhase('ready');
     }
@@ -167,7 +178,7 @@ export function HomePage() {
 
   const replayIntro = useCallback(() => {
     soundEngine.unlock();
-    soundEngine.playMenuTick();
+    soundEngine.playUiShift();
     setLocalError(null);
     setActivePanel('menu');
     setLoadProgress(0);
@@ -177,7 +188,11 @@ export function HomePage() {
 
   useEffect(() => {
     if (avatarCompletedTarget === 'create' || avatarCompletedTarget === 'join') {
-      soundEngine.playMenuConfirm();
+      if (avatarCompletedTarget === 'create') {
+        soundEngine.playUiModalOpen();
+      } else {
+        soundEngine.playUiConfirm();
+      }
       setLocalError(null);
       setActivePanel(avatarCompletedTarget);
       clearCompletedAvatarFlow();
@@ -187,7 +202,6 @@ export function HomePage() {
   const activateMenuItem = useCallback(
     (itemId: MenuItem['id']) => {
       soundEngine.unlock();
-      soundEngine.playMenuConfirm();
       setLocalError(null);
       if (itemId === 'create') {
         setAvatarOpen(true, 'create');
@@ -198,6 +212,7 @@ export function HomePage() {
       } else if (itemId === 'rules') {
         setRulesOpen(true);
       } else if (itemId === 'credits') {
+        soundEngine.playUiConfirm();
         setActivePanel('credits');
       }
     },
@@ -240,7 +255,11 @@ export function HomePage() {
       if (e.key === 'Escape') {
         if (activePanel !== 'menu') {
           e.preventDefault();
-          soundEngine.playMenuBack();
+          if (activePanel === 'create') {
+            soundEngine.playUiModalClose();
+          } else {
+            soundEngine.playUiBack();
+          }
           setLocalError(null);
           setActivePanel('menu');
         }
@@ -252,11 +271,11 @@ export function HomePage() {
       if (activePanel === 'menu') {
         if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
           e.preventDefault();
-          soundEngine.playMenuTick();
+          soundEngine.playUiShift();
           setSelectedIndex((prev) => (prev + 1) % MENU_ITEMS.length);
         } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
           e.preventDefault();
-          soundEngine.playMenuTick();
+          soundEngine.playUiShift();
           setSelectedIndex((prev) => (prev - 1 + MENU_ITEMS.length) % MENU_ITEMS.length);
         } else if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -264,6 +283,7 @@ export function HomePage() {
           if (current) activateMenuItem(current.id);
         } else if (e.key === 'm' || e.key === 'M') {
           e.preventDefault();
+          soundEngine.playUiToggle();
           setMutedAudio(!mutedAudio);
         } else if (e.key === 'r' || e.key === 'R') {
           e.preventDefault();
@@ -298,30 +318,43 @@ export function HomePage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (connectionStatus !== 'connected') {
+      soundEngine.playUiError();
+      setLocalError('Connecting to game server — please wait until online.');
+      return;
+    }
     if (!playerName.trim()) {
+      soundEngine.playUiError();
       setLocalError('Enter your alias before opening a table.');
       return;
     }
     setLocalError(null);
     setSubmitting(true);
-    soundEngine.playMenuConfirm();
+    soundEngine.playUiConfirm();
     await createRoom(playerName, pendingRoomSettings);
     setSubmitting(false);
   };
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (connectionStatus !== 'connected') {
+      soundEngine.playUiError();
+      setLocalError('Connecting to game server — please wait until online.');
+      return;
+    }
     if (!playerName.trim()) {
+      soundEngine.playUiError();
       setLocalError('Enter your alias before entering a table.');
       return;
     }
     if (normalizeRoomCode(roomCode).length !== 6) {
+      soundEngine.playUiError();
       setLocalError('Enter a valid 6-character room code.');
       return;
     }
     setLocalError(null);
     setSubmitting(true);
-    soundEngine.playMenuConfirm();
+    soundEngine.playUiConfirm();
     await joinRoom(roomCode, playerName);
     setSubmitting(false);
   };
@@ -349,10 +382,8 @@ export function HomePage() {
       </div>
       <button
         type="button"
-        onClick={() => {
-          soundEngine.playMenuTick();
-          setAvatarOpen(true);
-        }}
+        data-sfx="none"
+        onClick={() => setAvatarOpen(true)}
         className="shrink-0 px-2.5 py-1 rounded-sm border border-gold-400/45 bg-noir-900/80 hover:bg-noir-800 text-[11px] font-condensed uppercase tracking-wider text-gold-200 transition cursor-pointer"
       >
         Customize
@@ -524,9 +555,9 @@ export function HomePage() {
                     <button
                       key={item.id}
                       type="button"
+                      data-sfx="none"
                       onMouseEnter={() => {
                         if (selectedIndex !== idx) {
-                          soundEngine.playMenuTick();
                           setSelectedIndex(idx);
                         }
                       }}
@@ -633,6 +664,7 @@ export function HomePage() {
                   <div className="space-y-2 pt-1">
                     <button
                       type="submit"
+                      data-sfx="none"
                       disabled={disabled}
                       className="w-full py-2.5 px-4 rounded-sm bg-gradient-to-r from-[#b87424] via-[#d28d34] to-[#b87424] hover:brightness-110 text-[#0d0804] font-condensed font-bold uppercase tracking-[0.14em] text-base inline-flex items-center justify-center gap-2 transition shadow-[0_8px_24px_rgba(184,116,36,0.3)] disabled:opacity-60"
                     >
@@ -642,8 +674,8 @@ export function HomePage() {
 
                     <button
                       type="button"
+                      data-sfx="back"
                       onClick={() => {
-                        soundEngine.playMenuBack();
                         setLocalError(null);
                         setActivePanel('menu');
                       }}
@@ -708,10 +740,8 @@ export function HomePage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    soundEngine.playMenuBack();
-                    setActivePanel('menu');
-                  }}
+                  data-sfx="back"
+                  onClick={() => setActivePanel('menu')}
                   className="py-2 px-3 rounded-sm title-menu-glow text-cream-50 font-condensed uppercase tracking-[0.14em] text-xs inline-flex items-center gap-2 transition hover:brightness-110"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
@@ -735,6 +765,7 @@ export function HomePage() {
             <>
               <button
                 type="button"
+                data-sfx="none"
                 onClick={replayIntro}
                 className="inline-flex items-center gap-1.5 py-1 text-cream-100/75 hover:text-amber-300 transition"
               >
@@ -749,6 +780,7 @@ export function HomePage() {
 
               <button
                 type="button"
+                data-sfx="toggle"
                 onClick={() => setMutedAudio(!mutedAudio)}
                 className="inline-flex items-center gap-1.5 py-1 text-cream-100/75 hover:text-amber-300 transition"
               >
@@ -768,6 +800,7 @@ export function HomePage() {
               {activePanel === 'menu' ? (
                 <button
                   type="button"
+                  data-sfx="none"
                   onClick={() => activateMenuItem(activeMenuItem.id)}
                   className="inline-flex items-center gap-1.5 py-1 text-cream-100 hover:text-amber-200 transition"
                 >
@@ -779,8 +812,8 @@ export function HomePage() {
               ) : (
                 <button
                   type="button"
+                  data-sfx={activePanel === 'create' ? 'modalClose' : 'back'}
                   onClick={() => {
-                    soundEngine.playMenuBack();
                     setLocalError(null);
                     setActivePanel('menu');
                   }}
@@ -798,7 +831,11 @@ export function HomePage() {
           {bootPhase === 'loading' && (
             <button
               type="button"
-              onClick={skipIntro}
+              data-sfx="none"
+              onClick={(e) => {
+                e.stopPropagation();
+                skipIntro();
+              }}
               className="inline-flex items-center gap-1.5 py-1 text-cream-100/80 hover:text-amber-300 transition"
             >
               <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">
@@ -825,10 +862,8 @@ export function HomePage() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    soundEngine.playMenuBack();
-                    setAvatarOpen(true, 'create');
-                  }}
+                  data-sfx="none"
+                  onClick={() => setAvatarOpen(true, 'create')}
                   className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-gold-500/35 bg-noir-900 hover:bg-noir-800 text-xs font-condensed font-bold uppercase tracking-wider text-gold-200 transition cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
@@ -842,8 +877,8 @@ export function HomePage() {
 
               <button
                 type="button"
+                data-sfx="modalClose"
                 onClick={() => {
-                  soundEngine.playMenuBack();
                   setLocalError(null);
                   setActivePanel('menu');
                 }}
@@ -901,6 +936,7 @@ export function HomePage() {
 
                     <button
                       type="submit"
+                      data-sfx="none"
                       disabled={disabled}
                       className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#b87424] via-[#d28d34] to-[#b87424] hover:brightness-110 text-[#0d0804] font-display font-bold uppercase tracking-[0.14em] text-sm inline-flex items-center justify-center gap-2 transition shadow-[0_8px_24px_rgba(184,116,36,0.3)] disabled:opacity-60 cursor-pointer"
                     >
