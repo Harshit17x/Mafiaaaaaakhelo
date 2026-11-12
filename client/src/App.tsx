@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, LogOut, Radio, WifiOff } from 'lucide-react';
+import { LogOut, Radio, WifiOff } from 'lucide-react';
 import { soundEngine } from './audio/SoundEngine';
 import { mountUiSoundDelegator } from './audio/uiSoundDelegator';
 import { Atmosphere } from './components/Atmosphere';
@@ -97,6 +97,12 @@ export function App() {
   useEffect(() => {
     soundEngine.setPrefs(mutedAudio, volume);
   }, [mutedAudio, volume]);
+
+  useEffect(() => {
+    if (room && rulesOpen) {
+      setRulesOpen(false);
+    }
+  }, [room, rulesOpen, setRulesOpen]);
 
   const phase = room ? room.game.phase : 'HOME';
   const isDayTablePhase =
@@ -292,17 +298,6 @@ export function App() {
 
               <button
                 type="button"
-                data-sfx="click"
-                onClick={() => setRulesOpen(true)}
-                aria-label="Open Rules"
-                className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Rules</span>
-              </button>
-
-              <button
-                type="button"
                 data-sfx="back"
                 onClick={() => void leaveRoom()}
                 aria-label="Leave Room"
@@ -423,7 +418,7 @@ export function App() {
         </div>
       )}
 
-      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+      {!room && <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />}
       <AvatarPanelModal />
       <DevGodModePanel />
     </div>
