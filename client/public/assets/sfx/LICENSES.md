@@ -1,46 +1,46 @@
 # Sound Effects Licenses (`client/public/assets/sfx/`)
 
-## License & Provenance
+## Provenance
 
-All 50 `.wav` audio files in `client/public/assets/sfx/` are **original offline-synthesized studio foley & sound effect assets** created specifically for this project (22,050 Hz mono 16-bit PCM WAV, physically modeled modal/formant transients, filtered noise beds, early-reflection room reverb, and seamless crossfaded ambient loops).
+All 37 `.mp3` sound effects in `client/public/assets/sfx/` were generated via the **ElevenLabs Sound Generation API** (`v1/sound-generation`, 44.1 kHz MP3) specifically for Midnight City Mafia, and post-processed locally with `ffmpeg` (leading-silence trimming, fade shaping, peak normalization, and seamless ambient loop crossfading).
 
-- **License:** [CC0 1.0 Universal (Public Domain Dedication)](https://creativecommons.org/publicdomain/zero/1.0/)
-- **Source:** Original offline procedural DSP synthesis generated locally for Midnight City Mafia (zero third-party copyrighted samples).
+- **Generator:** ElevenLabs Sound Effects (`https://elevenlabs.io/sound-effects`)
+- **Format:** 44,100 Hz 128 kbps mono MP3
 
 ## Asset Inventory
 
-| File(s) | Cue (`SfxId`) | Format | License |
-| :--- | :--- | :--- | :--- |
-| `ui-hover-1.wav`, `ui-hover-2.wav`, `ui-hover-3.wav` | `uiHover` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-shift-1.wav`, `ui-shift-2.wav`, `ui-shift-3.wav` | `uiShift` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-click-1.wav`, `ui-click-2.wav`, `ui-click-3.wav` | `uiClick` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-confirm.wav` | `uiConfirm` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-back.wav` | `uiBack` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-toggle-1.wav`, `ui-toggle-2.wav` | `uiToggle` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-tab-1.wav`, `ui-tab-2.wav` | `uiTab` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-modal-open.wav` | `uiModalOpen` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-modal-close.wav` | `uiModalClose` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ui-error.wav` | `uiError` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `card-hover-1.wav`, `card-hover-2.wav`, `card-hover-3.wav` | `cardHover` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `card-select-1.wav`, `card-select-2.wav` | `cardSelect` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `card-flip-1.wav`, `card-flip-2.wav` | `cardFlip` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `card-shuffle.wav` | `cardShuffle` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `chip-clink-1.wav`, `chip-clink-2.wav`, `chip-clink-3.wav` | `chipClink` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `door-creak.wav` | `doorCreak` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `rooster.wav` | `rooster` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `gunshot.wav` | `gunshot` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `heal-chime.wav` | `healChime` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `investigate.wav` | `investigate` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `gavel.wav` | `gavel` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `timer-tick.wav` | `timerTick` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `countdown-go.wav` | `countdownGo` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `player-join.wav` | `playerJoin` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `player-leave.wav` | `playerLeave` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `footstep-1.wav`, `footstep-2.wav`, `footstep-3.wav`, `footstep-4.wav` | `footstep` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `chat-send.wav` | `chatSend` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `chat-receive.wav` | `chatReceive` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `victory-citizen.wav` | `victoryCitizen` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `victory-mafia.wav` | `victoryMafia` | 22050 Hz 16-bit mono WAV | CC0 1.0 / Public Domain (Original) |
-| `ambient-home.wav` | `ambientHome` | 22050 Hz 16-bit mono WAV (6s loop) | CC0 1.0 / Public Domain (Original) |
-| `ambient-night.wav` | `ambientNight` | 22050 Hz 16-bit mono WAV (6s loop) | CC0 1.0 / Public Domain (Original) |
-| `ambient-day.wav` | `ambientDay` | 22050 Hz 16-bit mono WAV (6s loop) | CC0 1.0 / Public Domain (Original) |
+| File(s) | Cue (`SfxId`) | Format |
+| :--- | :--- | :--- |
+| `ui-hover-1.mp3`, `ui-hover-2.mp3` | `uiHover` | 44.1 kHz MP3 |
+| `ui-shift-1.mp3` | `uiShift` | 44.1 kHz MP3 |
+| `ui-click-1.mp3`, `ui-click-2.mp3` | `uiClick` | 44.1 kHz MP3 |
+| `ui-confirm.mp3` | `uiConfirm` | 44.1 kHz MP3 |
+| `ui-back.mp3` | `uiBack` | 44.1 kHz MP3 |
+| `ui-toggle-1.mp3` | `uiToggle` | 44.1 kHz MP3 |
+| `ui-tab-1.mp3` | `uiTab` | 44.1 kHz MP3 |
+| `ui-modal-open.mp3` | `uiModalOpen` | 44.1 kHz MP3 |
+| `ui-modal-close.mp3` | `uiModalClose` | 44.1 kHz MP3 |
+| `ui-error.mp3` | `uiError` | 44.1 kHz MP3 |
+| `card-hover-1.mp3` | `cardHover` | 44.1 kHz MP3 |
+| `card-select-1.mp3` | `cardSelect` | 44.1 kHz MP3 |
+| `card-flip-1.mp3` | `cardFlip` | 44.1 kHz MP3 |
+| `card-shuffle.mp3` | `cardShuffle` | 44.1 kHz MP3 |
+| `chip-clink-1.mp3`, `chip-clink-2.mp3` | `chipClink` | 44.1 kHz MP3 |
+| `door-creak.mp3` | `doorCreak` | 44.1 kHz MP3 |
+| `rooster.mp3` | `rooster` | 44.1 kHz MP3 |
+| `gunshot.mp3` | `gunshot` | 44.1 kHz MP3 |
+| `heal-chime.mp3` | `healChime` | 44.1 kHz MP3 |
+| `investigate.mp3` | `investigate` | 44.1 kHz MP3 |
+| `gavel.mp3` | `gavel` | 44.1 kHz MP3 |
+| `timer-tick.mp3` | `timerTick` | 44.1 kHz MP3 |
+| `countdown-go.mp3` | `countdownGo` | 44.1 kHz MP3 |
+| `player-join.mp3` | `playerJoin` | 44.1 kHz MP3 |
+| `player-leave.mp3` | `playerLeave` | 44.1 kHz MP3 |
+| `footstep-1.mp3`, `footstep-2.mp3` | `footstep` | 44.1 kHz MP3 |
+| `chat-send.mp3` | `chatSend` | 44.1 kHz MP3 |
+| `chat-receive.mp3` | `chatReceive` | 44.1 kHz MP3 |
+| `victory-citizen.mp3` | `victoryCitizen` | 44.1 kHz MP3 |
+| `victory-mafia.mp3` | `victoryMafia` | 44.1 kHz MP3 |
+| `ambient-home.mp3` | `ambientHome` | 44.1 kHz MP3 (6.0s loop) |
+| `ambient-night.mp3` | `ambientNight` | 44.1 kHz MP3 (6.0s loop) |
+| `ambient-day.mp3` | `ambientDay` | 44.1 kHz MP3 (6.0s loop) |
