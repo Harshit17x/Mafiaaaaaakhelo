@@ -199,11 +199,6 @@ export function HomePage() {
 
   useEffect(() => {
     if (avatarCompletedTarget === 'create' || avatarCompletedTarget === 'join') {
-      if (avatarCompletedTarget === 'create') {
-        soundEngine.playUiModalOpen();
-      } else {
-        soundEngine.playUiConfirm();
-      }
       setLocalError(null);
       setActivePanel(avatarCompletedTarget);
       clearCompletedAvatarFlow();

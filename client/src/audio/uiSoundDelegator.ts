@@ -34,18 +34,6 @@ const INTERACTIVE_SELECTOR = [
   '[data-sfx]:not([data-sfx="none"])',
 ].join(', ');
 
-const KEY_NAV_KEYS = new Set([
-  'Tab',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'Home',
-  'End',
-  'PageUp',
-  'PageDown',
-]);
-
 const BACK_PATTERN =
   /\b(close|cancel|back|leave|exit|mute|unmute|dismiss|skip|clear|remove|delete|return|minimize)\b/i;
 
@@ -181,106 +169,6 @@ export function mountUiSoundDelegator(): () => void {
     return () => undefined;
   }
 
-  let lastHoveredEl: HTMLElement | null = null;
-  let lastFocusedEl: HTMLElement | null = null;
-  let lastPointerDownEl: HTMLElement | null = null;
-  let lastPointerDownAt = -Infinity;
-  let lastKeyNavAt = -Infinity;
-
-  const onPointerOver = (e: PointerEvent) => {
-    if (e.pointerType === 'touch') return;
-    if (lastHoveredEl && !lastHoveredEl.isConnected) {
-      lastHoveredEl = null;
-    }
-
-    const control = findInteractiveControl(e.target);
-    if (!control) {
-      lastHoveredEl = null;
-      return;
-    }
-
-    if (control === lastHoveredEl) return;
-    if (e.relatedTarget instanceof Node && control.contains(e.relatedTarget)) {
-      lastHoveredEl = control;
-      return;
-    }
-
-    lastHoveredEl = control;
-
-    const hoverAttr =
-      control.getAttribute('data-sfx-hover') ??
-      control.closest('[data-sfx-hover]')?.getAttribute('data-sfx-hover');
-
-    if (hoverAttr === 'none') return;
-    if (hoverAttr === 'card') {
-      soundEngine.playCardHover();
-    } else {
-      soundEngine.playUiHover();
-    }
-  };
-
-  const onPointerOut = (e: PointerEvent) => {
-    if (!lastHoveredEl) return;
-    if (!lastHoveredEl.isConnected) {
-      lastHoveredEl = null;
-      return;
-    }
-    if (!(e.target instanceof Node) || !lastHoveredEl.contains(e.target)) return;
-    if (e.relatedTarget instanceof Node && lastHoveredEl.contains(e.relatedTarget)) return;
-    lastHoveredEl = null;
-  };
-
-  const resetPointerState = () => {
-    lastHoveredEl = null;
-    lastPointerDownEl = null;
-  };
-
-  const onPointerDown = (e: PointerEvent) => {
-    void soundEngine.unlock();
-    lastPointerDownAt = performance.now();
-    lastPointerDownEl = findInteractiveControl(e.target);
-  };
-
-  const onTouchStart = () => {
-    void soundEngine.unlock();
-  };
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    void soundEngine.unlock();
-    if (KEY_NAV_KEYS.has(e.key)) {
-      lastKeyNavAt = performance.now();
-    }
-  };
-
-  const onFocusIn = (e: FocusEvent) => {
-    const control = findInteractiveControl(e.target);
-    if (!control) return;
-    if (control === lastFocusedEl) return;
-
-    const now = performance.now();
-    const samePointerTarget =
-      lastPointerDownEl !== null &&
-      (lastPointerDownEl === control ||
-        lastPointerDownEl.contains(control) ||
-        control.contains(lastPointerDownEl));
-
-    if (samePointerTarget && now - lastPointerDownAt < 500) {
-      lastFocusedEl = control;
-      return;
-    }
-
-    if (lastPointerDownAt > lastKeyNavAt && now - lastPointerDownAt < 350) {
-      lastFocusedEl = control;
-      return;
-    }
-
-    lastFocusedEl = control;
-
-    if (control.getAttribute('data-sfx-focus') === 'none') return;
-
-    soundEngine.playUiShift();
-  };
-
   const onClick = (e: MouseEvent) => {
     void soundEngine.unlock();
 
@@ -296,7 +184,19 @@ export function mountUiSoundDelegator(): () => void {
     }
 
     const kind = classifyControlClick(control);
-    playByKind(kind);
+    playByKind(kind === 'hover' || kind === 'shift' ? 'click' : kind);
+  };
+
+  const onPointerDown = () => {
+    void soundEngine.unlock();
+  };
+
+  const onTouchStart = () => {
+    void soundEngine.unlock();
+  };
+
+  const onKeyDown = () => {
+    void soundEngine.unlock();
   };
 
   const onChange = (e: Event) => {
@@ -304,33 +204,20 @@ export function mountUiSoundDelegator(): () => void {
     if (isControlDisabled(e.target)) return;
     const explicit = getExplicitSfx(e.target);
     if (explicit === 'none') return;
-    soundEngine.playUiToggle();
+    soundEngine.playUiClick();
   };
 
-  document.addEventListener('pointerover', onPointerOver, true);
-  document.addEventListener('pointerout', onPointerOut, true);
-  document.addEventListener('pointercancel', resetPointerState, true);
   document.addEventListener('pointerdown', onPointerDown, true);
   document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
   document.addEventListener('keydown', onKeyDown, true);
-  document.addEventListener('focusin', onFocusIn, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('change', onChange, true);
-  window.addEventListener('blur', resetPointerState);
 
   return () => {
-    document.removeEventListener('pointerover', onPointerOver, true);
-    document.removeEventListener('pointerout', onPointerOut, true);
-    document.removeEventListener('pointercancel', resetPointerState, true);
     document.removeEventListener('pointerdown', onPointerDown, true);
     document.removeEventListener('touchstart', onTouchStart, { capture: true });
     document.removeEventListener('keydown', onKeyDown, true);
-    document.removeEventListener('focusin', onFocusIn, true);
     document.removeEventListener('click', onClick, true);
     document.removeEventListener('change', onChange, true);
-    window.removeEventListener('blur', resetPointerState);
-    lastHoveredEl = null;
-    lastFocusedEl = null;
-    lastPointerDownEl = null;
   };
 }

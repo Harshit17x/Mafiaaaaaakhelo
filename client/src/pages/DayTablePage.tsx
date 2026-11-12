@@ -215,7 +215,6 @@ export function DayTablePage({
               data-sfx="none"
               onClick={() => {
                 if (!selectedVoteTarget) return;
-                soundEngine.playChipClink();
                 soundEngine.playUiConfirm();
                 void castVote(selectedVoteTarget);
               }}

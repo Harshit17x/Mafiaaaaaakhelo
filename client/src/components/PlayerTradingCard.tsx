@@ -136,7 +136,6 @@ export function PlayerTradingCard({
 
   const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') return;
-    soundEngine.playCardHover();
     onHoverChange?.(true);
     setGlare((prev) => ({ ...prev, active: true }));
   };

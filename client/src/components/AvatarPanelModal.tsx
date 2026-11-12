@@ -109,14 +109,6 @@ export function AvatarPanelModal() {
   const [saving, setSaving] = useState(false);
   const [mobileTab, setMobileTab] = useState<'board' | 'studio'>('board');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const wasOpenRef = useRef(false);
-
-  useEffect(() => {
-    if (avatarOpen && !wasOpenRef.current) {
-      soundEngine.playUiModalOpen();
-    }
-    wasOpenRef.current = avatarOpen;
-  }, [avatarOpen]);
 
   useEffect(() => {
     if (avatarOpen) {

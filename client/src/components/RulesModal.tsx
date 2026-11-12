@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Role } from '@midnight-city/shared';
 import { soundEngine } from '../audio/SoundEngine';
@@ -13,21 +13,11 @@ export function RulesModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const wasOpenRef = useRef(false);
-
-  useEffect(() => {
-    if (open && !wasOpenRef.current) {
-      soundEngine.playUiModalOpen();
-    } else if (!open && wasOpenRef.current) {
-      soundEngine.playUiModalClose();
-    }
-    wasOpenRef.current = open;
-  }, [open]);
-
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        soundEngine.playUiModalClose();
         onClose();
       }
     };
