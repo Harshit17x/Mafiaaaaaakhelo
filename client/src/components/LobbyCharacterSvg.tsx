@@ -33,6 +33,7 @@ export interface LobbyCharacterSvgProps {
   isMe: boolean;
   isSpeaking: boolean;
   selected?: boolean;
+  activeEmote?: string | null;
   onClick?: (e: React.MouseEvent) => void;
 }
 
@@ -44,6 +45,7 @@ export function LobbyCharacterSvg({
   isMe,
   isSpeaking,
   selected = false,
+  activeEmote,
   onClick,
 }: LobbyCharacterSvgProps) {
   const palette = SUIT_PALETTE[colorIndex % SUIT_PALETTE.length]!;
@@ -67,20 +69,27 @@ export function LobbyCharacterSvg({
         isOffline ? 'opacity-50' : 'opacity-100'
       }`}
     >
-      {/* Floating Name + Status Tag */}
+      {/* Floating Animated Emote Bubble */}
+      {activeEmote && (
+        <div className="absolute -top-7 sm:-top-8.5 z-40 pointer-events-none animate-bounce flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-noir-950/95 border-2 border-amber-400 text-amber-200 text-xs sm:text-sm font-bold shadow-[0_6px_20px_rgba(0,0,0,0.85)] whitespace-nowrap">
+          <span>{activeEmote}</span>
+        </div>
+      )}
+
+      {/* Floating Name + Status Tag (De-cluttered & Compact) */}
       <div
-        className={`mb-0.5 inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-px sm:py-0.5 rounded-full text-[8.5px] sm:text-[11px] font-semibold leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.8)] border whitespace-nowrap max-w-[5.2rem] sm:max-w-[8.5rem] transition ${
+        className={`mb-0.5 inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-semibold leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.8)] border whitespace-nowrap max-w-[5.8rem] sm:max-w-[8.5rem] transition ${
           selected
-            ? 'bg-gold-500/25 border-gold-300 text-gold-100'
-            : player.isReady
-              ? 'bg-emerald-950/90 border-emerald-400/60 text-emerald-100'
-              : isMe
-                ? 'bg-noir-950/95 border-gold-400/75 text-gold-200'
-                : 'bg-noir-950/90 border-gold-500/35 text-cream-100'
+            ? 'bg-gold-500/25 border-gold-300 text-gold-100 shadow-[0_0_12px_rgba(234,179,8,0.4)]'
+            : isMe
+              ? 'bg-noir-950/95 border-amber-400/80 text-amber-200'
+              : player.isReady
+                ? 'bg-noir-950/90 border-emerald-500/50 text-emerald-200'
+                : 'bg-noir-950/90 border-gold-500/30 text-cream-100'
         }`}
       >
         {player.isHost && (
-          <Crown className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-gold-300 shrink-0" aria-hidden="true" />
+          <Crown className="w-2.5 h-2.5 text-gold-300 shrink-0" aria-hidden="true" />
         )}
         <span className="truncate">{player.name}</span>
         {!player.isPlaying ? (
@@ -88,13 +97,13 @@ export function LobbyCharacterSvg({
             GM
           </span>
         ) : player.isReady ? (
-          <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-300 shrink-0" aria-hidden="true" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] shrink-0" aria-label="Ready" />
         ) : null}
         {isSpeaking && (
-          <Mic className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-emerald-300 animate-pulse shrink-0" aria-hidden="true" />
+          <Mic className="w-2.5 h-2.5 text-emerald-300 animate-pulse shrink-0" aria-hidden="true" />
         )}
         {isOffline && (
-          <WifiOff className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-amber-400 shrink-0" aria-hidden="true" />
+          <WifiOff className="w-2.5 h-2.5 text-amber-400 shrink-0" aria-hidden="true" />
         )}
       </div>
 

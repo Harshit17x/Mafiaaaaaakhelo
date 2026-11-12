@@ -220,15 +220,31 @@ function buildMockAvatar(index: number): PlayerAvatarConfig {
   };
 }
 
+const LOUNGE_SPAWN_SPOTS: readonly { x: number; y: number; facing: 'left' | 'right' }[] = [
+  { x: 440, y: 340, facing: 'right' },
+  { x: 260, y: 235, facing: 'right' },
+  { x: 715, y: 460, facing: 'left' },
+  { x: 490, y: 275, facing: 'left' },
+  { x: 265, y: 345, facing: 'right' },
+  { x: 805, y: 390, facing: 'left' },
+  { x: 245, y: 470, facing: 'right' },
+  { x: 575, y: 345, facing: 'left' },
+  { x: 410, y: 155, facing: 'right' },
+  { x: 490, y: 410, facing: 'right' },
+  { x: 710, y: 235, facing: 'right' },
+  { x: 340, y: 460, facing: 'right' },
+  { x: 620, y: 155, facing: 'left' },
+  { x: 635, y: 300, facing: 'left' },
+  { x: 885, y: 390, facing: 'left' },
+  { x: 670, y: 450, facing: 'left' },
+];
+
 function buildMockSpawn(index: number, now: number): LobbyCharacterPosition {
-  const angle = ((index % 16) / 8) * Math.PI - Math.PI / 2;
-  const radius = index >= 8 ? 165 : 115;
-  const x = Math.round(480 + Math.cos(angle) * radius);
-  const y = Math.round(335 + Math.sin(angle) * (radius * 0.65));
+  const spot = LOUNGE_SPAWN_SPOTS[index % LOUNGE_SPAWN_SPOTS.length]!;
   return {
-    x,
-    y,
-    facing: x > 480 ? 'left' : 'right',
+    x: spot.x,
+    y: spot.y,
+    facing: spot.facing,
     moving: false,
     updatedAt: now,
   };
