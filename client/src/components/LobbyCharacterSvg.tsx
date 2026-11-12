@@ -1,7 +1,8 @@
 import React from 'react';
 import type { AvatarFilter, ClientPlayerView } from '@midnight-city/shared';
-import { Check, Crown, Mic, WifiOff } from 'lucide-react';
+import { Crown, Mic, MicOff, PhoneCall, PhoneOff, WifiOff } from 'lucide-react';
 import { resolveAvatarImageSrc } from './AvatarPolaroidCard';
+import { useVoiceStore } from '../stores/useVoiceStore';
 
 const SUIT_PALETTE = [
   { coat: '#9f1d28', trim: '#c92a37', band: '#f5dfb0', tie: '#ffd166' },
@@ -52,20 +53,48 @@ export function LobbyCharacterSvg({
   const avatarSrc = resolveAvatarImageSrc(player.avatar);
   const clipId = `lobby-char-avatar-${player.id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const isOffline = !player.connected;
+
+  const voiceJoined = useVoiceStore((s) => s.joined);
+  const voiceJoining = useVoiceStore((s) => s.joining);
+  const openMicMuted = useVoiceStore((s) => s.openMicMuted);
+  const pttMode = useVoiceStore((s) => s.pttMode);
+  const pttPressed = useVoiceStore((s) => s.pttPressed);
+  const canSpeak = useVoiceStore((s) => s.canSpeak);
+  const joinVoice = useVoiceStore((s) => s.joinVoice);
+  const leaveVoice = useVoiceStore((s) => s.leaveVoice);
+  const toggleMute = useVoiceStore((s) => s.toggleMute);
+
+  const effectiveMuted = pttMode ? !pttPressed : openMicMuted;
+
   const ringStroke = isSpeaking
     ? '#34d399'
-    : player.isReady
-      ? '#10b981'
-      : isMe
-        ? '#f5dfb0'
-        : '#b98e39';
+    : isMe && voiceJoined && !effectiveMuted
+      ? '#34d399'
+      : player.isReady
+        ? '#10b981'
+        : isMe
+          ? '#f5dfb0'
+          : '#b98e39';
 
   return (
-    <button
-      type="button"
+    <div
+      role={onClick && !isMe ? 'button' : undefined}
+      tabIndex={onClick && !isMe ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={
+        onClick && !isMe
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick(e as unknown as React.MouseEvent);
+              }
+            }
+          : undefined
+      }
       aria-label={`${player.name}${player.isReady ? ', ready' : ', waiting'}${isMe ? ' (you)' : ''}`}
-      className={`group relative flex flex-col items-center select-none focus:outline-none cursor-pointer transition-opacity ${
+      className={`group relative flex flex-col items-center select-none focus:outline-none ${
+        onClick && !isMe ? 'cursor-pointer' : ''
+      } transition-opacity ${
         isOffline ? 'opacity-50' : 'opacity-100'
       }`}
     >
@@ -76,7 +105,82 @@ export function LobbyCharacterSvg({
         </div>
       )}
 
-      {/* Floating Name + Status Tag (De-cluttered & Compact) */}
+      {/* Interactive Mic Control Option directly over Avatar Head */}
+      {isMe && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mb-1 z-30 flex items-center gap-1"
+        >
+          {!voiceJoined ? (
+            <button
+              type="button"
+              data-sfx="confirm"
+              onClick={(e) => {
+                e.stopPropagation();
+                void joinVoice(true);
+              }}
+              disabled={voiceJoining}
+              title="Click to turn on mic"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-noir-950/95 border border-gold-500/60 hover:border-emerald-400 hover:bg-emerald-950/40 text-[9.5px] sm:text-[11px] font-bold text-gold-200 hover:text-emerald-200 shadow-[0_4px_12px_rgba(0,0,0,0.85)] cursor-pointer transition active:scale-95"
+            >
+              <Mic className="w-3 h-3 text-gold-400 group-hover:text-emerald-300" />
+              <span>{voiceJoining ? 'Connecting...' : 'Mic Off'}</span>
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-0.5 rounded-full bg-noir-950/95 border border-gold-500/40 p-0.5 shadow-[0_4px_12px_rgba(0,0,0,0.85)]">
+              <button
+                type="button"
+                data-sfx="toggle"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMute();
+                }}
+                disabled={!canSpeak}
+                title={effectiveMuted ? 'Mic is muted — Click to unmute' : 'Mic is live — Click to mute'}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] sm:text-[11px] font-bold cursor-pointer transition active:scale-95 ${
+                  !canSpeak
+                    ? 'bg-noir-900 text-cream-600 border border-noir-700'
+                    : effectiveMuted
+                      ? 'bg-crimson-950/90 border border-crimson-500/70 text-crimson-200 hover:bg-crimson-900'
+                      : 'bg-emerald-950/90 border border-emerald-400/80 text-emerald-200 hover:bg-emerald-900 shadow-[0_0_10px_rgba(52,211,153,0.5)]'
+                }`}
+              >
+                {!canSpeak ? (
+                  <>
+                    <MicOff className="w-3 h-3 text-cream-600" />
+                    <span>Silenced</span>
+                  </>
+                ) : effectiveMuted ? (
+                  <>
+                    <MicOff className="w-3 h-3 text-crimson-300" />
+                    <span>Muted</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-3 h-3 text-emerald-300 animate-pulse" />
+                    <span>Mic Live</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                data-sfx="back"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void leaveVoice();
+                }}
+                title="Disconnect mic"
+                className="p-1 rounded-full text-cream-400 hover:text-crimson-300 hover:bg-crimson-950/60 cursor-pointer transition"
+              >
+                <PhoneOff className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Floating Name + Status Tag */}
       <div
         className={`mb-0.5 inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] font-semibold leading-tight shadow-[0_4px_12px_rgba(0,0,0,0.8)] border whitespace-nowrap max-w-[5.8rem] sm:max-w-[8.5rem] transition ${
           selected
@@ -192,7 +296,7 @@ export function LobbyCharacterSvg({
             />
           </g>
 
-          {/* Circular Avatar Portrait Medallion Head (never mirrored so face/text stay upright) */}
+          {/* Circular Avatar Portrait Medallion Head */}
           <circle cx="32" cy="27" r="16.2" fill="#0d111a" stroke={ringStroke} strokeWidth="2.4" />
           {avatarSrc && (
             <image
@@ -234,7 +338,6 @@ export function LobbyCharacterSvg({
           </g>
         </g>
       </svg>
-    </button>
+    </div>
   );
 }
-
