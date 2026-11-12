@@ -895,15 +895,10 @@ export function HomePage() {
             <div className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-6">
               <div className="grid lg:grid-cols-12 gap-4 sm:gap-5 items-start">
                 <form onSubmit={handleCreate} className="lg:col-span-4 space-y-4">
-                  <div className="rounded-2xl border border-gold-500/25 bg-noir-950/90 p-3.5 sm:p-4 space-y-4">
-                    <div>
-                      <h2 className="font-display text-lg text-gold-200 uppercase tracking-wider">
-                        Create Private Table
-                      </h2>
-                      <p className="text-xs text-cream-400 mt-0.5">
-                        Enter your alias and review your pinned dossier card.
-                      </p>
-                    </div>
+                  <div className="rounded-2xl border border-gold-500/25 bg-noir-950/90 p-4 space-y-4">
+                    <h2 className="font-display text-lg text-gold-200 uppercase tracking-wider">
+                      Create Private Table
+                    </h2>
 
                     <div>
                       <label
@@ -934,7 +929,7 @@ export function HomePage() {
 
                     {connectionStatus !== 'connected' && (
                       <p className="text-xs text-amber-300/90">
-                        Connecting to game server — button activates once online.
+                        Connecting to game server...
                       </p>
                     )}
 
@@ -947,10 +942,6 @@ export function HomePage() {
                       <Plus className="w-4 h-4" aria-hidden="true" />
                       {submitting ? 'Opening Table...' : 'Open Table'}
                     </button>
-
-                    <p className="text-[11px] text-cream-400 leading-relaxed">
-                      5–16 players • Private Voice &amp; Text • Rules configured here apply to the table when created.
-                    </p>
                   </div>
                 </form>
 
