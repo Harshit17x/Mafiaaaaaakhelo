@@ -375,8 +375,8 @@ export function buildDevMockState(
           .map((p) => p.id)
       : [];
 
-  const targetA = alivePlayers[1] ?? alivePlayers[0]!;
-  const targetB = alivePlayers[2] ?? alivePlayers[0]!;
+  const targetA = alivePlayers[1] ?? alivePlayers[0] ?? playingPlayers[1] ?? playingPlayers[0]!;
+  const targetB = alivePlayers[2] ?? alivePlayers[0] ?? playingPlayers[2] ?? playingPlayers[0]!;
   const victim = playingPlayers[playingPlayers.length - 1] ?? targetA;
 
   const godView: GodViewState | null = config.humanHostSpectator

@@ -1392,6 +1392,7 @@ export function MidnightLoungeTable3D({
       feltBump.dispose();
       rugTex.dispose();
       cardBackTex.dispose();
+      renderer.domElement.remove();
       renderer.dispose();
     };
   }, [seatKeysSignature, myPlayerId, viewMode, webglError]);
@@ -1488,6 +1489,7 @@ export function MidnightLoungeTable3D({
 
       {showCardsGrid ? (
         <div
+          key="cards-view"
           className={`flex flex-col overflow-hidden bg-noir-950/95 ${stageHeightClass}`}
         >
           {(fillViewport || isFullscreen) && (
@@ -1573,7 +1575,7 @@ export function MidnightLoungeTable3D({
           )}
         </div>
       ) : (
-        <div className={`relative overflow-hidden bg-[#06080f] ${stageHeightClass}`}>
+        <div key="3d-view" className={`relative overflow-hidden bg-[#06080f] ${stageHeightClass}`}>
           <div ref={containerRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" />
 
           {/* Subtle Radial Cinema Vignette over 3D Viewport */}

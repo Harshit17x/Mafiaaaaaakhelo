@@ -15,7 +15,7 @@ export function AudioControls() {
         onClick={() => setMutedAudio(!mutedAudio)}
         aria-label={mutedAudio ? 'Unmute game audio' : 'Mute game audio'}
         title={mutedAudio ? 'Unmute audio' : 'Mute audio'}
-        className="p-2 sm:p-1.5 rounded-lg text-cream-200 hover:text-gold-200 hover:bg-noir-800"
+        className="p-1.5 rounded-lg text-cream-200 hover:text-gold-200 hover:bg-noir-800"
       >
         {mutedAudio ? (
           <VolumeX className="w-4 h-4 text-crimson-400" />

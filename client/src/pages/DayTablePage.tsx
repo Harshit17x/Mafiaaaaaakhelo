@@ -242,7 +242,7 @@ export function DayTablePage({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className="pointer-events-auto w-full max-w-xl max-h-[86dvh] flex flex-col p-[2px] rounded-2xl foil-card-frame overflow-hidden"
             >
-              <div className="rounded-[14px] bg-gradient-to-b from-[#161c2d]/95 to-[#090c15]/98 backdrop-blur-xl p-4 sm:p-6 flex flex-col min-h-0 space-y-4">
+              <div className="rounded-[14px] bg-gradient-to-b from-[#161c2d]/95 to-[#090c15] backdrop-blur-xl p-4 sm:p-6 flex flex-col min-h-0 space-y-4">
                 <div className="flex items-start justify-between gap-3 border-b border-gold-500/25 pb-3.5 shrink-0">
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div className="p-2 sm:p-2.5 rounded-xl bg-noir-950 border border-gold-400/40 shrink-0">

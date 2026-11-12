@@ -121,14 +121,18 @@ export function App() {
   }, [lastNarration, room?.settings.narratorMode]);
 
   return (
-    <div className="relative min-h-screen min-h-[100dvh] flex flex-col overflow-x-clip">
+    <div
+      className={`relative flex flex-col overflow-x-clip ${
+        isDayTablePhase ? 'h-screen h-[100dvh]' : 'min-h-screen min-h-[100dvh]'
+      }`}
+    >
       {room && <Atmosphere phase={phase} />}
 
       {room && (
         <header className="relative z-20 border-b border-gold-500/20 bg-noir-950/75 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-2.5 sm:px-4 h-14 flex items-center justify-between gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <span className="font-display font-bold tracking-[0.12em] sm:tracking-[0.2em] text-gold-200 text-xs sm:text-base truncate">
+          <div className="max-w-6xl mx-auto px-2.5 sm:px-4 h-14 flex items-center justify-between gap-1.5 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+              <span className="font-display font-bold tracking-[0.08em] sm:tracking-[0.2em] text-gold-200 text-[11px] sm:text-base whitespace-nowrap">
                 MIDNIGHT CITY
               </span>
               <span className="hidden sm:inline-block font-mono text-xs px-2 py-0.5 rounded bg-noir-800 border border-gold-500/30 text-gold-300 shrink-0">
@@ -137,13 +141,13 @@ export function App() {
               <LivePlayersBadge variant="header" />
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
+            <div className="flex items-center gap-0.5 sm:gap-2.5 shrink-0">
               {connectionStatus !== 'connected' && (
                 <span
                   role="status"
                   aria-label={connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
                   title={connectionStatus === 'connecting' ? 'Connecting...' : 'Reconnecting...'}
-                  className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs"
+                  className="inline-flex items-center gap-1.5 px-1.5 sm:px-2.5 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs"
                 >
                   <WifiOff className="w-3.5 h-3.5 animate-pulse" />
                   <span className="hidden sm:inline">
@@ -159,7 +163,7 @@ export function App() {
                 type="button"
                 onClick={() => setRulesOpen(true)}
                 aria-label="Open Rules"
-                className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
+                className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-cream-200 hover:text-gold-200 hover:bg-noir-800"
               >
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Rules</span>
@@ -169,7 +173,7 @@ export function App() {
                 type="button"
                 onClick={() => void leaveRoom()}
                 aria-label="Leave Room"
-                className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-crimson-300 hover:text-crimson-200 hover:bg-crimson-900/40"
+                className="inline-flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium text-crimson-300 hover:text-crimson-200 hover:bg-crimson-900/40"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Leave</span>
@@ -234,7 +238,11 @@ export function App() {
       ) : !room ? (
         <HomePage />
       ) : (
-        <div className="relative z-10 flex-1 flex flex-col min-h-0">
+        <div
+          className={`relative z-10 flex-1 flex flex-col min-h-0 ${
+            isDayTablePhase ? 'overflow-y-auto' : ''
+          }`}
+        >
           <VoiceControlsBar onSpeakingChange={handleSpeakingChange} />
           {lastNarration &&
             room.settings.narratorMode === 'AUTO_NARRATOR' &&
@@ -257,7 +265,7 @@ export function App() {
           <HostControlsBar />
           <AnimatePresence mode="wait">
             <motion.div
-              key={room.game.phase}
+              key={isDayTablePhase ? 'DAY_TABLE' : room.game.phase}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
