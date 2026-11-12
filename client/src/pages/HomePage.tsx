@@ -93,6 +93,7 @@ export function HomePage() {
   const resetPendingRoomSettings = useGameStore((s) => s.resetPendingRoomSettings);
   const connectionStatus = useGameStore((s) => s.connectionStatus);
   const mutedAudio = useGameStore((s) => s.mutedAudio);
+  const volume = useGameStore((s) => s.volume);
   const setMutedAudio = useGameStore((s) => s.setMutedAudio);
 
   const initialInviteCode = useMemo(() => extractInviteRoomCode(), []);
@@ -185,6 +186,16 @@ export function HomePage() {
     setBootPhase('loading');
     setIntroRunId((n) => n + 1);
   }, []);
+
+  const toggleMute = useCallback(() => {
+    const nextMuted = !mutedAudio;
+    setMutedAudio(nextMuted);
+    soundEngine.setPrefs(nextMuted, volume);
+    if (!nextMuted) {
+      soundEngine.unlock();
+      soundEngine.playUiToggle();
+    }
+  }, [mutedAudio, setMutedAudio, volume]);
 
   useEffect(() => {
     if (avatarCompletedTarget === 'create' || avatarCompletedTarget === 'join') {
@@ -283,8 +294,7 @@ export function HomePage() {
           if (current) activateMenuItem(current.id);
         } else if (e.key === 'm' || e.key === 'M') {
           e.preventDefault();
-          soundEngine.playUiToggle();
-          setMutedAudio(!mutedAudio);
+          toggleMute();
         } else if (e.key === 'r' || e.key === 'R') {
           e.preventDefault();
           replayIntro();
@@ -300,8 +310,7 @@ export function HomePage() {
     selectedIndex,
     rulesOpen,
     avatarOpen,
-    mutedAudio,
-    setMutedAudio,
+    toggleMute,
     skipIntro,
     replayIntro,
     activateMenuItem,
@@ -780,8 +789,8 @@ export function HomePage() {
 
               <button
                 type="button"
-                data-sfx="toggle"
-                onClick={() => setMutedAudio(!mutedAudio)}
+                data-sfx="none"
+                onClick={toggleMute}
                 className="inline-flex items-center gap-1.5 py-1 text-cream-100/75 hover:text-amber-300 transition"
               >
                 <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded-[3px] bg-cream-100/90 text-[#0c090a] font-bold text-[10px] leading-none">

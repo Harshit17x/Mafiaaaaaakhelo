@@ -452,21 +452,18 @@ export function AvatarPanelModal() {
                       };
 
                   return (
-                    <div
-                      key={preset.id}
-                      data-sfx="none"
-                      data-sfx-hover="card"
-                      className="flex flex-col items-center gap-1.5"
-                    >
-                      <AvatarPolaroidCard
-                        avatar={cardAvatar}
-                        selected={isSelected}
-                        showPin
-                        showEquippedBadge
-                        size="board"
-                        title={`${preset.name} — ${preset.tagline}`}
-                        onClick={() => handleSelectPreset(preset.id)}
-                      />
+                    <div key={preset.id} className="flex flex-col items-center gap-1.5">
+                      <div data-sfx="none" data-sfx-hover="card">
+                        <AvatarPolaroidCard
+                          avatar={cardAvatar}
+                          selected={isSelected}
+                          showPin
+                          showEquippedBadge
+                          size="board"
+                          title={`${preset.name} — ${preset.tagline}`}
+                          onClick={() => handleSelectPreset(preset.id)}
+                        />
+                      </div>
                       <span
                         className={`text-[11px] font-condensed uppercase tracking-wider px-2 py-0.5 rounded transition ${
                           isSelected
@@ -486,36 +483,38 @@ export function AvatarPanelModal() {
                     draft.presetId === 'custom' && draft.customDataUrl === entry.dataUrl;
                   return (
                     <div key={entry.id} className="relative flex flex-col items-center gap-1.5">
-                      <div className="relative" data-sfx="none" data-sfx-hover="card">
-                        <AvatarPolaroidCard
-                          avatar={{
-                            ...draft,
-                            presetId: 'custom',
-                            customDataUrl: entry.dataUrl,
-                            pinColor: isSelected ? draft.pinColor : 'gold',
-                            tilt: isSelected ? draft.tilt : 1.6,
-                            filter: isSelected ? draft.filter : 'color',
-                            frameTint: isSelected ? draft.frameTint : 'cream',
-                            caption: isSelected ? draft.caption : entry.label,
-                          }}
-                          selected={isSelected}
-                          showPin
-                          showEquippedBadge
-                          size="board"
-                          title={`Equip ${entry.label}`}
-                          onClick={() => {
-                            soundEngine.playCardFlip();
-                            setUploadError(null);
-                            setDraft((prev) => ({
-                              ...prev,
+                      <div className="relative">
+                        <div data-sfx="none" data-sfx-hover="card">
+                          <AvatarPolaroidCard
+                            avatar={{
+                              ...draft,
                               presetId: 'custom',
                               customDataUrl: entry.dataUrl,
-                              zoom: 1,
-                              offsetX: 0,
-                              offsetY: 0,
-                            }));
-                          }}
-                        />
+                              pinColor: isSelected ? draft.pinColor : 'gold',
+                              tilt: isSelected ? draft.tilt : 1.6,
+                              filter: isSelected ? draft.filter : 'color',
+                              frameTint: isSelected ? draft.frameTint : 'cream',
+                              caption: isSelected ? draft.caption : entry.label,
+                            }}
+                            selected={isSelected}
+                            showPin
+                            showEquippedBadge
+                            size="board"
+                            title={`Equip ${entry.label}`}
+                            onClick={() => {
+                              soundEngine.playCardFlip();
+                              setUploadError(null);
+                              setDraft((prev) => ({
+                                ...prev,
+                                presetId: 'custom',
+                                customDataUrl: entry.dataUrl,
+                                zoom: 1,
+                                offsetX: 0,
+                                offsetY: 0,
+                              }));
+                            }}
+                          />
+                        </div>
                         <button
                           type="button"
                           data-sfx="back"
@@ -541,26 +540,24 @@ export function AvatarPanelModal() {
                 })}
 
                 {/* Add New Custom Avatar Slot */}
-                <div
-                  data-sfx="click"
-                  data-sfx-hover="card"
-                  className="flex flex-col items-center gap-1.5"
-                >
-                  <AvatarPolaroidCard
-                    avatar={{
-                      ...createDefaultAvatarConfig(),
-                      presetId: 'custom',
-                      pinColor: 'gold',
-                      tilt: 2.1,
-                      customDataUrl: null,
-                    }}
-                    selected={false}
-                    emptyCustomSlot
-                    showPin
-                    size="board"
-                    title="Add a new custom PNG/JPG avatar"
-                    onClick={() => fileInputRef.current?.click()}
-                  />
+                <div className="flex flex-col items-center gap-1.5">
+                  <div data-sfx-hover="card">
+                    <AvatarPolaroidCard
+                      avatar={{
+                        ...createDefaultAvatarConfig(),
+                        presetId: 'custom',
+                        pinColor: 'gold',
+                        tilt: 2.1,
+                        customDataUrl: null,
+                      }}
+                      selected={false}
+                      emptyCustomSlot
+                      showPin
+                      size="board"
+                      title="Add a new custom PNG/JPG avatar"
+                      onClick={() => fileInputRef.current?.click()}
+                    />
+                  </div>
                   <span className="inline-flex items-center gap-1 text-[11px] font-condensed uppercase tracking-wider px-2 py-0.5 rounded bg-[#261108]/75 border border-gold-400/35 text-gold-200 font-semibold">
                     <Plus className="w-3 h-3" />
                     Add Avatar
