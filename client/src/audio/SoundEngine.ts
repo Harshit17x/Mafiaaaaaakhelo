@@ -679,11 +679,13 @@ class MidnightSoundEngine {
       );
       if (existingIdx !== -1) {
         const prev = this.pendingSfxQueue[existingIdx];
-        this.pendingSfxQueue[existingIdx] = {
-          id,
-          opts: prev.opts || opts ? { ...prev.opts, ...opts } : undefined,
-          queuedAt: now,
-        };
+        if (prev) {
+          this.pendingSfxQueue[existingIdx] = {
+            id,
+            opts: prev.opts || opts ? { ...prev.opts, ...opts } : undefined,
+            queuedAt: now,
+          };
+        }
         return;
       }
     }
@@ -740,7 +742,7 @@ class MidnightSoundEngine {
         idx = (idx + 1) % files.length;
       }
       const candidate = files[idx];
-      if (!this.decodedBuffers.has(candidate)) {
+      if (candidate && !this.decodedBuffers.has(candidate)) {
         const decodedIdx = files.findIndex(
           (f, i) => i !== prevIdx && this.decodedBuffers.has(f)
         );
