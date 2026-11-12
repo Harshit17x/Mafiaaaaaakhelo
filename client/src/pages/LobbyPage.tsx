@@ -4,6 +4,7 @@ import {
   Copy,
   Lock,
   Play,
+  Sparkles,
   Unlock,
 } from 'lucide-react';
 import { soundEngine } from '../audio/SoundEngine';
@@ -115,6 +116,19 @@ export function LobbyPage({
                 {room.locked ? 'Room Locked' : 'Room Open'}
               </button>
             )}
+
+            <button
+              type="button"
+              data-sfx="none"
+              onClick={() => {
+                soundEngine.playUiModalOpen();
+                setAvatarOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gold-500/40 bg-noir-800 text-gold-200 hover:bg-noir-700 text-xs font-semibold uppercase tracking-wider transition"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-gold-400" />
+              Avatar Studio
+            </button>
 
             {me?.isPlaying && (
               <button
