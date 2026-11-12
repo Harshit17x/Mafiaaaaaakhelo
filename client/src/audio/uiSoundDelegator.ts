@@ -31,7 +31,7 @@ const INTERACTIVE_SELECTOR = [
   '[role="option"]',
   '[role="checkbox"]',
   '[role="radio"]',
-  '[data-sfx]',
+  '[data-sfx]:not([data-sfx="none"])',
 ].join(', ');
 
 const KEY_NAV_KEYS = new Set([
@@ -193,9 +193,6 @@ export function mountUiSoundDelegator(): () => void {
 
     lastHoveredEl = control;
 
-    const explicit = getExplicitSfx(control);
-    if (explicit === 'none') return;
-
     const hoverAttr =
       control.getAttribute('data-sfx-hover') ??
       control.closest('[data-sfx-hover]')?.getAttribute('data-sfx-hover');
@@ -256,8 +253,7 @@ export function mountUiSoundDelegator(): () => void {
 
     lastFocusedEl = control;
 
-    const explicit = getExplicitSfx(control);
-    if (explicit === 'none') return;
+    if (control.getAttribute('data-sfx-focus') === 'none') return;
 
     soundEngine.playUiShift();
   };
