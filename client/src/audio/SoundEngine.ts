@@ -26,18 +26,20 @@ interface ActiveAmbientChannel {
 }
 
 const DEFAULT_COOLDOWN_MS: Partial<Record<SfxId, number>> = {
-  uiHover: 45,
-  uiShift: 45,
-  uiClick: 35,
-  uiToggle: 40,
-  uiTab: 50,
-  cardHover: 65,
-  cardSelect: 50,
+  uiHover: 20,
+  uiShift: 30,
+  uiClick: 25,
+  uiToggle: 35,
+  uiTab: 40,
+  cardHover: 30,
+  cardSelect: 45,
   footstep: 220,
   timerTick: 220,
   chatReceive: 160,
   chatSend: 80,
 };
+
+const PASSIVE_CUES = new Set<SfxId>(['uiHover', 'uiShift', 'cardHover']);
 
 const DEFAULT_RATE_JITTER: Partial<Record<SfxId, number>> = {
   uiHover: 0.04,
@@ -97,8 +99,10 @@ class MidnightSoundEngine {
   private lastVariantIdx = new Map<SfxId, number>();
 
   private resumePromise: Promise<void> | null = null;
+  private resumeAttemptAt = -Infinity;
   private iosUnlocked = false;
   private listenersAttached = false;
+  private isFlushingQueue = false;
 
   private whiteNoiseBuf: AudioBuffer | null = null;
   private pinkNoiseBuf: AudioBuffer | null = null;
@@ -144,6 +148,10 @@ class MidnightSoundEngine {
           this.onContextRunning();
         }
       });
+
+      if (this.rawBuffers.size > 0) {
+        void this.decodeAllPending();
+      }
     }
 
     if (!this.listenersAttached && typeof document !== 'undefined') {
@@ -152,7 +160,7 @@ class MidnightSoundEngine {
         if (document.visibilityState === 'visible' && this.ctx) {
           const state = this.ctx.state as string;
           if (state === 'suspended' || state === 'interrupted') {
-            void this.unlock();
+            void this.unlock(false);
           }
         }
       });
@@ -172,15 +180,18 @@ class MidnightSoundEngine {
       src.connect(gain);
       gain.connect(ctx.destination);
       src.start(0);
-      this.iosUnlocked = true;
+      if (ctx.state === 'running') {
+        this.iosUnlocked = true;
+      }
     } catch {
       // Ignore if context forbids source creation before resume
     }
   }
 
   private onContextRunning(): void {
+    this.iosUnlocked = true;
     void this.decodeAllPending();
-    this.flushPendingQueue();
+    void this.flushPendingQueue();
     if (
       this.desiredAmbient !== this.activeAmbientMode ||
       (this.desiredAmbient !== 'none' && this.activeAmbientChannel === null)
@@ -189,19 +200,27 @@ class MidnightSoundEngine {
     }
   }
 
-  unlock(): Promise<void> {
+  unlock(isUserGesture = true): Promise<void> {
     const ctx = this.ensureContext();
     if (!ctx) return Promise.resolve();
-
-    this.playSilentUnlockPulse(ctx);
 
     if (ctx.state === 'running') {
       this.onContextRunning();
       return Promise.resolve();
     }
 
-    if (!this.resumePromise) {
-      this.resumePromise = ctx
+    if (!isUserGesture) {
+      return Promise.resolve();
+    }
+
+    this.playSilentUnlockPulse(ctx);
+
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    // Always re-issue ctx.resume() inside a fresh user gesture if a prior
+    // resume promise stalled or occurred more than 15ms ago.
+    if (!this.resumePromise || now - this.resumeAttemptAt > 15) {
+      this.resumeAttemptAt = now;
+      const promise = ctx
         .resume()
         .then(() => {
           if (this.ctx && this.ctx.state === 'running') {
@@ -210,8 +229,11 @@ class MidnightSoundEngine {
         })
         .catch(() => undefined)
         .finally(() => {
-          this.resumePromise = null;
+          if (this.resumePromise === promise) {
+            this.resumePromise = null;
+          }
         });
+      this.resumePromise = promise;
     }
 
     return this.resumePromise;
@@ -241,7 +263,7 @@ class MidnightSoundEngine {
         const batch = urlList.slice(i, i + BATCH_SIZE);
         await Promise.allSettled(batch.map((url) => this.fetchRawBuffer(url)));
       }
-      if (this.ctx && this.ctx.state === 'running') {
+      if (this.ctx) {
         void this.decodeAllPending();
       }
     })();
@@ -290,11 +312,11 @@ class MidnightSoundEngine {
     if (inFlight) return inFlight;
 
     const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running') return null;
+    if (!ctx) return null;
 
     const promise = (async () => {
       const raw = this.rawBuffers.get(url) ?? (await this.fetchRawBuffer(url));
-      if (!raw || !this.ctx || this.ctx.state !== 'running') return null;
+      if (!raw || !this.ctx) return null;
 
       try {
         const audioBuf = await this.ctx.decodeAudioData(raw.slice(0));
@@ -302,7 +324,11 @@ class MidnightSoundEngine {
         this.maybeUpgradeAmbientToSample(url);
         return audioBuf;
       } catch {
-        this.failedUrls.add(url);
+        // Only permanently mark failed if context is running; some browsers
+        // restrict decodeAudioData before the first user gesture.
+        if (this.ctx?.state === 'running') {
+          this.failedUrls.add(url);
+        }
         return null;
       } finally {
         this.decodingPromises.delete(url);
@@ -314,13 +340,17 @@ class MidnightSoundEngine {
   }
 
   private async decodeAllPending(): Promise<void> {
-    if (!this.ctx || this.ctx.state !== 'running') return;
-    const urls = Array.from(this.rawBuffers.keys()).filter(
-      (u) => !this.decodedBuffers.has(u) && !this.failedUrls.has(u)
-    );
+    if (!this.ctx) return;
+    const urls = Array.from(this.rawBuffers.keys())
+      .filter((u) => !this.decodedBuffers.has(u) && !this.failedUrls.has(u))
+      .sort((a, b) => {
+        const aAmb = a.includes('ambient-') ? 1 : 0;
+        const bAmb = b.includes('ambient-') ? 1 : 0;
+        return aAmb - bAmb;
+      });
     const BATCH_SIZE = 4;
     for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-      if (!this.ctx || this.ctx.state !== 'running') break;
+      if (!this.ctx) break;
       const batch = urls.slice(i, i + BATCH_SIZE);
       await Promise.allSettled(batch.map((u) => this.decodeUrl(u)));
     }
@@ -579,27 +609,92 @@ class MidnightSoundEngine {
     nodes.push(osc1, osc2, lfo, lfoGain, droneFilter, droneGain);
   }
 
-  private flushPendingQueue(): void {
-    if (this.pendingSfxQueue.length === 0) return;
-    const now = performance.now();
-    const queue = this.pendingSfxQueue.splice(0, this.pendingSfxQueue.length);
+  private async flushPendingQueue(): Promise<void> {
+    if (this.isFlushingQueue || this.pendingSfxQueue.length === 0) return;
+    this.isFlushingQueue = true;
 
-    for (const item of queue) {
-      if (now - item.queuedAt > 1500) continue;
-      this.playSfx(item.id, item.opts);
+    try {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const queue = this.pendingSfxQueue.splice(0, this.pendingSfxQueue.length);
+      const hasActionCue = queue.some(
+        (item) => !PASSIVE_CUES.has(item.id) && now - item.queuedAt <= 1500
+      );
+
+      const seenInBatch = new Set<SfxId>();
+      const toPlay: QueuedSfx[] = [];
+      for (const item of queue) {
+        const age = now - item.queuedAt;
+        if (age > 1500) continue;
+        if (PASSIVE_CUES.has(item.id) && (hasActionCue || age > 350)) continue;
+        if (seenInBatch.has(item.id)) continue;
+        seenInBatch.add(item.id);
+        toPlay.push(item);
+      }
+
+      for (const item of toPlay) {
+        if (!this.ctx || this.ctx.state !== 'running') break;
+
+        const entry = this.getAssetEntry(item.id);
+        const files = entry?.files ?? [];
+        const hasDecoded = files.some((f) => this.decodedBuffers.has(f));
+        if (!hasDecoded && files.length > 0) {
+          const preloaded = files.find((f) => this.rawBuffers.has(f) && !this.failedUrls.has(f));
+          if (preloaded) {
+            await Promise.race([
+              this.decodeUrl(preloaded),
+              new Promise<null>((resolve) => {
+                if (typeof window !== 'undefined') {
+                  window.setTimeout(() => resolve(null), 35);
+                } else {
+                  setTimeout(() => resolve(null), 35);
+                }
+              }),
+            ]);
+          }
+        }
+
+        if (!this.ctx || this.ctx.state !== 'running') break;
+        this.playSfx(item.id, { ...item.opts, ignoreCooldown: true });
+      }
+    } finally {
+      this.isFlushingQueue = false;
+      if (this.pendingSfxQueue.length > 0 && this.ctx?.state === 'running') {
+        void this.flushPendingQueue();
+      }
     }
   }
 
   private queuePendingSfx(id: SfxId, opts?: PlaySfxOptions): void {
-    const now = performance.now();
-    // Deduplicate identical repetitive hover/shift cues in queue
-    const existingIdx = this.pendingSfxQueue.findIndex((item) => item.id === id);
-    if (existingIdx !== -1) {
-      this.pendingSfxQueue[existingIdx] = { id, opts, queuedAt: now };
-      return;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (PASSIVE_CUES.has(id)) {
+      const existingIdx = this.pendingSfxQueue.findIndex((item) => item.id === id);
+      if (existingIdx !== -1) {
+        this.pendingSfxQueue[existingIdx] = { id, opts, queuedAt: now };
+        return;
+      }
+    } else {
+      // Preserve action cues; only coalesce duplicate calls from the exact same event tick
+      const existingIdx = this.pendingSfxQueue.findIndex(
+        (item) => item.id === id && now - item.queuedAt < 12
+      );
+      if (existingIdx !== -1) {
+        const prev = this.pendingSfxQueue[existingIdx];
+        this.pendingSfxQueue[existingIdx] = {
+          id,
+          opts: prev.opts || opts ? { ...prev.opts, ...opts } : undefined,
+          queuedAt: now,
+        };
+        return;
+      }
     }
-    if (this.pendingSfxQueue.length >= 6) {
-      this.pendingSfxQueue.shift();
+
+    if (this.pendingSfxQueue.length >= 8) {
+      const passiveIdx = this.pendingSfxQueue.findIndex((item) => PASSIVE_CUES.has(item.id));
+      if (passiveIdx !== -1) {
+        this.pendingSfxQueue.splice(passiveIdx, 1);
+      } else {
+        this.pendingSfxQueue.shift();
+      }
     }
     this.pendingSfxQueue.push({ id, opts, queuedAt: now });
   }
@@ -609,6 +704,17 @@ class MidnightSoundEngine {
 
     const entry = this.getAssetEntry(id);
     const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxBus) return;
+
+    if (ctx.state !== 'running') {
+      this.queuePendingSfx(id, opts);
+      if (!PASSIVE_CUES.has(id)) {
+        void this.unlock(true);
+      }
+      return;
+    }
+
     const cooldown =
       opts?.ignoreCooldown
         ? 0
@@ -619,15 +725,6 @@ class MidnightSoundEngine {
       if (nowMs - prev < cooldown) {
         return;
       }
-    }
-
-    const ctx = this.ensureContext();
-    if (!ctx || !this.sfxBus) return;
-
-    if (ctx.state !== 'running') {
-      this.queuePendingSfx(id, opts);
-      void this.unlock();
-      return;
     }
 
     this.lastPlayedAt.set(id, nowMs);
@@ -641,6 +738,17 @@ class MidnightSoundEngine {
       let idx = Math.floor(Math.random() * files.length);
       if (idx === prevIdx) {
         idx = (idx + 1) % files.length;
+      }
+      const candidate = files[idx];
+      if (!this.decodedBuffers.has(candidate)) {
+        const decodedIdx = files.findIndex(
+          (f, i) => i !== prevIdx && this.decodedBuffers.has(f)
+        );
+        const fallbackDecodedIdx =
+          decodedIdx !== -1 ? decodedIdx : files.findIndex((f) => this.decodedBuffers.has(f));
+        if (fallbackDecodedIdx !== -1) {
+          idx = fallbackDecodedIdx;
+        }
       }
       this.lastVariantIdx.set(id, idx);
       selectedUrl = files[idx];
@@ -841,22 +949,22 @@ class MidnightSoundEngine {
       case 'uiHover': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.028,
+          duration: 0.055,
           filterType: 'bandpass',
-          freqStart: 2200 * rate,
-          freqEnd: 1400 * rate,
-          q: 1.8,
-          gainPeak: 0.075,
+          freqStart: 2400 * rate,
+          freqEnd: 1350 * rate,
+          q: 1.6,
+          gainPeak: 0.28,
           pink: true,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 540 * rate,
-          freqEnd: 290 * rate,
+          freqStart: 420 * rate,
+          freqEnd: 210 * rate,
           startTime: now,
-          duration: 0.032,
-          gainPeak: 0.045,
-          attack: 0.003,
+          duration: 0.06,
+          gainPeak: 0.22,
+          attack: 0.002,
         });
         break;
       }
@@ -864,20 +972,20 @@ class MidnightSoundEngine {
       case 'uiShift': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.03,
+          duration: 0.05,
           filterType: 'bandpass',
-          freqStart: 2600 * rate,
-          freqEnd: 1700 * rate,
-          q: 2.2,
-          gainPeak: 0.09,
+          freqStart: 2700 * rate,
+          freqEnd: 1550 * rate,
+          q: 2.0,
+          gainPeak: 0.3,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 320 * rate,
-          freqEnd: 165 * rate,
+          freqStart: 300 * rate,
+          freqEnd: 145 * rate,
           startTime: now,
-          duration: 0.045,
-          gainPeak: 0.07,
+          duration: 0.068,
+          gainPeak: 0.26,
           attack: 0.002,
         });
         break;
@@ -886,48 +994,66 @@ class MidnightSoundEngine {
       case 'uiClick': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.025,
+          duration: 0.045,
           filterType: 'bandpass',
-          freqStart: 2800 * rate,
+          freqStart: 3000 * rate,
           freqEnd: 1200 * rate,
-          q: 2.0,
-          gainPeak: 0.14,
+          q: 1.8,
+          gainPeak: 0.42,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 220 * rate,
-          freqEnd: 95 * rate,
+          freqStart: 240 * rate,
+          freqEnd: 82 * rate,
           startTime: now,
-          duration: 0.05,
-          gainPeak: 0.14,
+          duration: 0.085,
+          gainPeak: 0.44,
+          attack: 0.001,
+        });
+        this.playTone(ctx, out, {
+          type: 'sine',
+          freqStart: 740 * rate,
+          freqEnd: 680 * rate,
+          startTime: now + 0.006,
+          duration: 0.075,
+          gainPeak: 0.16,
           attack: 0.002,
         });
         break;
       }
 
       case 'uiConfirm': {
+        this.playFilteredNoise(ctx, out, {
+          startTime: now,
+          duration: 0.04,
+          filterType: 'bandpass',
+          freqStart: 2600 * rate,
+          freqEnd: 1100 * rate,
+          q: 1.7,
+          gainPeak: 0.34,
+        });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 185 * rate,
-          freqEnd: 88 * rate,
+          freqStart: 205 * rate,
+          freqEnd: 78 * rate,
           startTime: now,
-          duration: 0.11,
-          gainPeak: 0.16,
-          attack: 0.003,
+          duration: 0.12,
+          gainPeak: 0.46,
+          attack: 0.002,
         });
         this.playTone(ctx, out, {
           type: 'sine',
           freqStart: 523.25 * rate,
           startTime: now,
-          duration: 0.18,
-          gainPeak: 0.1,
+          duration: 0.2,
+          gainPeak: 0.3,
         });
         this.playTone(ctx, out, {
           type: 'sine',
           freqStart: 783.99 * rate,
-          startTime: now + 0.035,
+          startTime: now + 0.032,
           duration: 0.22,
-          gainPeak: 0.09,
+          gainPeak: 0.26,
         });
         break;
       }
@@ -935,21 +1061,21 @@ class MidnightSoundEngine {
       case 'uiBack': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.05,
+          duration: 0.075,
           filterType: 'lowpass',
           freqStart: 1500 * rate,
-          freqEnd: 450 * rate,
-          gainPeak: 0.07,
+          freqEnd: 420 * rate,
+          gainPeak: 0.24,
           pink: true,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 360 * rate,
-          freqEnd: 170 * rate,
+          freqStart: 340 * rate,
+          freqEnd: 135 * rate,
           startTime: now,
-          duration: 0.095,
-          gainPeak: 0.11,
-          filterFreq: 1200,
+          duration: 0.13,
+          gainPeak: 0.38,
+          filterFreq: 1300,
         });
         break;
       }
@@ -957,19 +1083,28 @@ class MidnightSoundEngine {
       case 'uiToggle': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.02,
+          duration: 0.032,
           filterType: 'highpass',
-          freqStart: 1800 * rate,
-          gainPeak: 0.12,
+          freqStart: 1900 * rate,
+          gainPeak: 0.36,
+        });
+        this.playTone(ctx, out, {
+          type: 'triangle',
+          freqStart: 280 * rate,
+          freqEnd: 110 * rate,
+          startTime: now,
+          duration: 0.065,
+          gainPeak: 0.34,
+          attack: 0.002,
         });
         this.playTone(ctx, out, {
           type: 'sine',
           freqStart: 420 * rate,
-          freqEnd: 580 * rate,
+          freqEnd: 620 * rate,
           startTime: now,
-          duration: 0.055,
-          gainPeak: 0.11,
-          attack: 0.003,
+          duration: 0.085,
+          gainPeak: 0.28,
+          attack: 0.002,
         });
         break;
       }
@@ -977,21 +1112,22 @@ class MidnightSoundEngine {
       case 'uiTab': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.07,
+          duration: 0.095,
           filterType: 'bandpass',
-          freqStart: 1100 * rate,
-          freqEnd: 2400 * rate,
-          q: 1.5,
-          gainPeak: 0.12,
+          freqStart: 1200 * rate,
+          freqEnd: 2450 * rate,
+          q: 1.4,
+          gainPeak: 0.36,
           pink: true,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 280 * rate,
-          freqEnd: 190 * rate,
+          freqStart: 250 * rate,
+          freqEnd: 125 * rate,
           startTime: now,
-          duration: 0.05,
-          gainPeak: 0.08,
+          duration: 0.085,
+          gainPeak: 0.32,
+          attack: 0.002,
         });
         break;
       }
@@ -999,13 +1135,13 @@ class MidnightSoundEngine {
       case 'uiModalOpen': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.16,
+          duration: 0.18,
           filterType: 'bandpass',
           freqStart: 500 * rate,
           freqEnd: 1700 * rate,
           q: 1.1,
-          gainPeak: 0.11,
-          attack: 0.02,
+          gainPeak: 0.28,
+          attack: 0.015,
           pink: true,
         });
         this.playTone(ctx, out, {
@@ -1013,16 +1149,16 @@ class MidnightSoundEngine {
           freqStart: 261.63 * rate,
           startTime: now,
           duration: 0.24,
-          gainPeak: 0.085,
-          attack: 0.015,
+          gainPeak: 0.28,
+          attack: 0.012,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
           freqStart: 392 * rate,
-          startTime: now + 0.03,
+          startTime: now + 0.028,
           duration: 0.24,
-          gainPeak: 0.065,
-          attack: 0.015,
+          gainPeak: 0.22,
+          attack: 0.012,
           filterFreq: 1400,
         });
         break;
@@ -1031,46 +1167,46 @@ class MidnightSoundEngine {
       case 'uiModalClose': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.12,
+          duration: 0.14,
           filterType: 'bandpass',
           freqStart: 1500 * rate,
-          freqEnd: 420 * rate,
+          freqEnd: 380 * rate,
           q: 1.2,
-          gainPeak: 0.1,
+          gainPeak: 0.28,
           pink: true,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 260 * rate,
-          freqEnd: 120 * rate,
-          startTime: now + 0.02,
-          duration: 0.13,
-          gainPeak: 0.1,
-          filterFreq: 950,
+          freqStart: 240 * rate,
+          freqEnd: 95 * rate,
+          startTime: now + 0.015,
+          duration: 0.15,
+          gainPeak: 0.34,
+          filterFreq: 1000,
         });
         break;
       }
 
       case 'uiError': {
-        [0, 0.11].forEach((offset, i) => {
+        [0, 0.105].forEach((offset, i) => {
           const t = now + offset;
-          const base = (i === 0 ? 155 : 132) * rate;
+          const base = (i === 0 ? 165 : 138) * rate;
           this.playTone(ctx, out, {
             type: 'triangle',
             freqStart: base,
-            freqEnd: base * 0.82,
+            freqEnd: base * 0.72,
             startTime: t,
-            duration: 0.11,
-            gainPeak: 0.18,
-            filterFreq: 650,
+            duration: 0.12,
+            gainPeak: 0.42,
+            filterFreq: 750,
           });
           this.playTone(ctx, out, {
             type: 'sine',
             freqStart: base * 1.414,
             freqEnd: base * 1.15,
             startTime: t,
-            duration: 0.1,
-            gainPeak: 0.08,
+            duration: 0.11,
+            gainPeak: 0.2,
           });
         });
         break;
@@ -1079,13 +1215,22 @@ class MidnightSoundEngine {
       case 'cardHover': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.045,
+          duration: 0.07,
           filterType: 'bandpass',
-          freqStart: 3200 * rate,
-          freqEnd: 1900 * rate,
-          q: 1.6,
-          gainPeak: 0.095,
+          freqStart: 2900 * rate,
+          freqEnd: 1700 * rate,
+          q: 1.4,
+          gainPeak: 0.32,
           pink: true,
+        });
+        this.playTone(ctx, out, {
+          type: 'sine',
+          freqStart: 290 * rate,
+          freqEnd: 150 * rate,
+          startTime: now,
+          duration: 0.055,
+          gainPeak: 0.18,
+          attack: 0.002,
         });
         break;
       }
@@ -1093,18 +1238,18 @@ class MidnightSoundEngine {
       case 'cardSelect': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.055,
+          duration: 0.07,
           filterType: 'highpass',
-          freqStart: 1600 * rate,
-          gainPeak: 0.16,
+          freqStart: 1500 * rate,
+          gainPeak: 0.4,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
-          freqStart: 175 * rate,
-          freqEnd: 68 * rate,
+          freqStart: 188 * rate,
+          freqEnd: 64 * rate,
           startTime: now,
-          duration: 0.085,
-          gainPeak: 0.18,
+          duration: 0.11,
+          gainPeak: 0.46,
           attack: 0.002,
         });
         break;
@@ -1113,21 +1258,21 @@ class MidnightSoundEngine {
       case 'cardFlip': {
         this.playFilteredNoise(ctx, out, {
           startTime: now,
-          duration: 0.13,
+          duration: 0.14,
           filterType: 'bandpass',
           freqStart: 1400 * rate,
           freqEnd: 3400 * rate,
           q: 1.3,
-          gainPeak: 0.2,
+          gainPeak: 0.36,
           attack: 0.01,
         });
         this.playTone(ctx, out, {
           type: 'triangle',
           freqStart: 210 * rate,
-          freqEnd: 95 * rate,
-          startTime: now + 0.03,
-          duration: 0.08,
-          gainPeak: 0.12,
+          freqEnd: 88 * rate,
+          startTime: now + 0.04,
+          duration: 0.1,
+          gainPeak: 0.32,
           attack: 0.003,
         });
         break;
@@ -1143,7 +1288,7 @@ class MidnightSoundEngine {
             freqStart: (1800 + i * 240) * rate,
             freqEnd: (1100 + i * 160) * rate,
             q: 1.8,
-            gainPeak: 0.13,
+            gainPeak: 0.24,
             attack: 0.003,
           });
         }
@@ -1151,16 +1296,16 @@ class MidnightSoundEngine {
       }
 
       case 'chipClink': {
-        const partials = [2350, 3780, 5120];
-        [0, 0.055].forEach((offset, hitIdx) => {
+        const partials = [2280, 3690, 5040];
+        [0, 0.052].forEach((offset, hitIdx) => {
           const t = now + offset;
-          const level = hitIdx === 0 ? 0.1 : 0.075;
+          const level = hitIdx === 0 ? 0.34 : 0.24;
           partials.forEach((f, idx) => {
             this.playTone(ctx, out, {
               type: 'sine',
               freqStart: f * rate * (hitIdx === 1 ? 1.04 : 1),
               startTime: t,
-              duration: 0.075 - idx * 0.012,
+              duration: 0.1 - idx * 0.015,
               gainPeak: level / (idx + 1),
               attack: 0.001,
             });

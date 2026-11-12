@@ -69,8 +69,14 @@ function isControlDisabled(el: HTMLElement): boolean {
 }
 
 function findInteractiveControl(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof Element)) return null;
-  const control = target.closest(INTERACTIVE_SELECTOR);
+  const el =
+    target instanceof Element
+      ? target
+      : target instanceof Node
+        ? target.parentElement
+        : null;
+  if (!el) return null;
+  const control = el.closest(INTERACTIVE_SELECTOR);
   if (!(control instanceof HTMLElement)) return null;
   if (isControlDisabled(control)) return null;
   return control;
@@ -183,11 +189,19 @@ export function mountUiSoundDelegator(): () => void {
 
   const onPointerOver = (e: PointerEvent) => {
     if (e.pointerType === 'touch') return;
+    if (lastHoveredEl && !lastHoveredEl.isConnected) {
+      lastHoveredEl = null;
+    }
+
     const control = findInteractiveControl(e.target);
-    if (!control) return;
+    if (!control) {
+      lastHoveredEl = null;
+      return;
+    }
 
     if (control === lastHoveredEl) return;
     if (e.relatedTarget instanceof Node && control.contains(e.relatedTarget)) {
+      lastHoveredEl = control;
       return;
     }
 
@@ -207,9 +221,18 @@ export function mountUiSoundDelegator(): () => void {
 
   const onPointerOut = (e: PointerEvent) => {
     if (!lastHoveredEl) return;
+    if (!lastHoveredEl.isConnected) {
+      lastHoveredEl = null;
+      return;
+    }
     if (!(e.target instanceof Node) || !lastHoveredEl.contains(e.target)) return;
     if (e.relatedTarget instanceof Node && lastHoveredEl.contains(e.relatedTarget)) return;
     lastHoveredEl = null;
+  };
+
+  const resetPointerState = () => {
+    lastHoveredEl = null;
+    lastPointerDownEl = null;
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -286,22 +309,26 @@ export function mountUiSoundDelegator(): () => void {
 
   document.addEventListener('pointerover', onPointerOver, true);
   document.addEventListener('pointerout', onPointerOut, true);
+  document.addEventListener('pointercancel', resetPointerState, true);
   document.addEventListener('pointerdown', onPointerDown, true);
   document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('focusin', onFocusIn, true);
   document.addEventListener('click', onClick, true);
   document.addEventListener('change', onChange, true);
+  window.addEventListener('blur', resetPointerState);
 
   return () => {
     document.removeEventListener('pointerover', onPointerOver, true);
     document.removeEventListener('pointerout', onPointerOut, true);
+    document.removeEventListener('pointercancel', resetPointerState, true);
     document.removeEventListener('pointerdown', onPointerDown, true);
     document.removeEventListener('touchstart', onTouchStart, { capture: true });
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('focusin', onFocusIn, true);
     document.removeEventListener('click', onClick, true);
     document.removeEventListener('change', onChange, true);
+    window.removeEventListener('blur', resetPointerState);
     lastHoveredEl = null;
     lastFocusedEl = null;
     lastPointerDownEl = null;
